@@ -26,17 +26,36 @@ class WikibaseAPI {
         this.password = password;
 
         try {
-            // Step 1: Get login token
-            const loginToken = await this.getLoginToken();
+            // For now, skip authentication and just verify the endpoints are accessible
+            // This will work in read-only mode
+            // TODO: Implement proper OAuth or server-side proxy for write operations
 
-            // Step 2: Login
-            await this.login(loginToken);
+            // Test if API is accessible
+            const testParams = new URLSearchParams({
+                action: 'query',
+                meta: 'siteinfo',
+                format: 'json'
+            });
 
-            // Step 3: Get CSRF token for editing
-            this.csrfToken = await this.getCsrfToken();
+            const testResponse = await fetch(`${this.apiEndpoint}?${testParams}`, {
+                method: 'GET',
+                mode: 'cors'
+            });
 
-            this.isAuthenticated = true;
-            return { success: true };
+            if (!testResponse.ok) {
+                throw new Error(`Cannot connect to Wikibase at ${this.baseUrl}`);
+            }
+
+            // Test SPARQL endpoint
+            const sparqlTest = await this.sparqlQuery('SELECT * WHERE { ?s ?p ?o } LIMIT 1');
+
+            if (!sparqlTest) {
+                throw new Error('SPARQL endpoint not accessible');
+            }
+
+            this.isAuthenticated = true; // Mark as connected (read-only)
+            console.warn('Connected in READ-ONLY mode. Edit operations require OAuth authentication.');
+            return { success: true, readOnly: true };
         } catch (error) {
             console.error('Connection failed:', error);
             return { success: false, error: error.message };

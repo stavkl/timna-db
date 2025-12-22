@@ -90,7 +90,20 @@ async function handleLogin(e) {
 
         if (result.success) {
             // Update UI
-            elements.connectionStatus.textContent = `Connected to ${url}`;
+            let statusText = `Connected to ${url}`;
+            if (result.readOnly) {
+                statusText += ' (READ-ONLY MODE)';
+                // Disable edit buttons
+                document.getElementById('save-btn').disabled = true;
+                document.getElementById('create-class-btn').disabled = true;
+                document.getElementById('create-property-btn').disabled = true;
+                document.getElementById('add-statement-btn').disabled = true;
+
+                // Show warning
+                alert('Connected in READ-ONLY mode.\n\nDue to CORS limitations, editing is not available directly from the browser.\nYou can view the ontology structure, but cannot make changes.\n\nTo enable editing, you would need to set up OAuth or use a backend proxy.');
+            }
+
+            elements.connectionStatus.textContent = statusText;
             elements.connectionStatus.className = 'status-connected';
             elements.loginPanel.style.display = 'none';
             elements.mainContent.style.display = 'block';

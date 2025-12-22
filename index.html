@@ -17,20 +17,24 @@
         <!-- Login Panel -->
         <div id="login-panel" class="panel">
             <h2>Connect to Wikibase</h2>
+            <p style="color: #856404; background-color: #fff3cd; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+                <strong>Note:</strong> Due to CORS limitations, the app currently works in READ-ONLY mode.
+                You can explore your ontology structure, but editing features are disabled.
+            </p>
             <form id="login-form">
                 <div class="form-group">
                     <label for="wikibase-url">Wikibase URL:</label>
                     <input type="text" id="wikibase-url" value="https://timna-database.wikibase.cloud" required>
                 </div>
                 <div class="form-group">
-                    <label for="bot-username">Bot Username:</label>
-                    <input type="text" id="bot-username" placeholder="YourBot@YourBotName" required>
+                    <label for="bot-username">Bot Username (optional):</label>
+                    <input type="text" id="bot-username" placeholder="Leave empty for read-only access">
                 </div>
                 <div class="form-group">
-                    <label for="bot-password">Bot Password:</label>
-                    <input type="password" id="bot-password" required>
+                    <label for="bot-password">Bot Password (optional):</label>
+                    <input type="password" id="bot-password" placeholder="Leave empty for read-only access">
                 </div>
-                <button type="submit">Connect</button>
+                <button type="submit">Connect (Read-Only)</button>
             </form>
         </div>
 
