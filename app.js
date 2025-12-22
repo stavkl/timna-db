@@ -201,9 +201,16 @@ function buildClassTree(classes) {
     classes.forEach(cls => {
         const id = extractId(cls.class);
         if (!classMap.has(id)) {
+            // Use label if it exists and is not a URL, otherwise use ID
+            let label = cls.classLabel || id;
+            // Check if label is actually a URL (fallback from label service)
+            if (label.startsWith('http')) {
+                label = id; // Use ID instead of URL
+            }
+
             classMap.set(id, {
                 id: id,
-                label: cls.classLabel || id,
+                label: label,
                 uri: cls.class,
                 children: []
             });
@@ -305,9 +312,15 @@ function renderPropertyList(properties) {
         toggle.className = 'tree-toggle';
         toggle.textContent = '•';
 
+        // Use label if it exists and is not a URL, otherwise use ID
+        let labelText = prop.propertyLabel || id;
+        if (labelText.startsWith('http')) {
+            labelText = id; // Use ID instead of URL
+        }
+
         const label = document.createElement('span');
         label.className = 'tree-item-label';
-        label.textContent = prop.propertyLabel || id;
+        label.textContent = labelText;
 
         const idSpan = document.createElement('span');
         idSpan.className = 'tree-item-id';
