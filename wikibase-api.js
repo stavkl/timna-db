@@ -26,39 +26,37 @@ class WikibaseAPI {
         this.password = password;
 
         try {
-            // For now, skip authentication and just verify the endpoints are accessible
-            // This will work in read-only mode
-            // TODO: Implement proper OAuth or server-side proxy for write operations
+            // Use SPARQL endpoint only (MediaWiki API blocked by mixed content security)
+            console.log('Testing SPARQL endpoint:', this.sparqlEndpoint);
 
-            // Test if API is accessible
+            const testQuery = 'SELECT * WHERE { ?s ?p ?o } LIMIT 1';
             const testParams = new URLSearchParams({
-                action: 'query',
-                meta: 'siteinfo',
+                query: testQuery,
                 format: 'json'
             });
 
-            const testResponse = await fetch(`${this.apiEndpoint}?${testParams}`, {
+            const testResponse = await fetch(`${this.sparqlEndpoint}?${testParams}`, {
                 method: 'GET',
-                mode: 'cors'
+                headers: {
+                    'Accept': 'application/sparql-results+json'
+                }
             });
 
+            console.log('SPARQL response status:', testResponse.status);
+
             if (!testResponse.ok) {
-                throw new Error(`Cannot connect to Wikibase at ${this.baseUrl}`);
+                throw new Error(`Cannot connect to SPARQL endpoint (Status: ${testResponse.status})`);
             }
 
-            // Test SPARQL endpoint
-            const sparqlTest = await this.sparqlQuery('SELECT * WHERE { ?s ?p ?o } LIMIT 1');
+            const data = await testResponse.json();
+            console.log('SPARQL test successful:', data);
 
-            if (!sparqlTest) {
-                throw new Error('SPARQL endpoint not accessible');
-            }
-
-            this.isAuthenticated = true; // Mark as connected (read-only)
-            console.warn('Connected in READ-ONLY mode. Edit operations require OAuth authentication.');
+            this.isAuthenticated = true; // Mark as connected (read-only, SPARQL only)
+            console.warn('Connected in READ-ONLY mode using SPARQL. MediaWiki API unavailable due to browser security restrictions.');
             return { success: true, readOnly: true };
         } catch (error) {
             console.error('Connection failed:', error);
-            return { success: false, error: error.message };
+            return { success: false, error: `${error.message}` };
         }
     }
 
@@ -176,23 +174,49 @@ class WikibaseAPI {
     }
 
     /**
-     * Get entity by ID
+     * Get entity by ID using SPARQL
      */
     async getEntity(entityId) {
-        const params = new URLSearchParams({
-            action: 'wbgetentities',
-            ids: entityId,
-            format: 'json',
-            origin: '*'
-        });
+        // Use SPARQL to get entity information
+        const query = `
+            SELECT ?label ?description ?alias WHERE {
+                BIND(wd:${entityId} AS ?item)
+                OPTIONAL { ?item rdfs:label ?label . FILTER(LANG(?label) = "en") }
+                OPTIONAL { ?item schema:description ?description . FILTER(LANG(?description) = "en") }
+                OPTIONAL { ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "en") }
+            }
+        `;
 
-        const response = await fetch(`${this.apiEndpoint}?${params}`, {
-            method: 'GET',
-            mode: 'cors'
-        });
+        const results = await this.sparqlQuery(query);
+        const bindings = results.results.bindings;
 
-        const data = await response.json();
-        return data.entities[entityId];
+        // Format as entity object similar to MediaWiki API
+        const entity = {
+            id: entityId,
+            labels: {},
+            descriptions: {},
+            aliases: {},
+            claims: {} // TODO: Fetch claims via SPARQL if needed
+        };
+
+        if (bindings.length > 0) {
+            const first = bindings[0];
+            if (first.label) {
+                entity.labels.en = { language: 'en', value: first.label.value };
+            }
+            if (first.description) {
+                entity.descriptions.en = { language: 'en', value: first.description.value };
+            }
+            // Collect all aliases
+            const aliases = bindings
+                .filter(b => b.alias)
+                .map(b => ({ language: 'en', value: b.alias.value }));
+            if (aliases.length > 0) {
+                entity.aliases.en = aliases;
+            }
+        }
+
+        return entity;
     }
 
     /**
