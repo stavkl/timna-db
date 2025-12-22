@@ -387,7 +387,7 @@ class WikibaseAPI {
         const query = `
             SELECT DISTINCT ?class ?classLabel ?parent ?parentLabel WHERE {
                 ?class ?p ?o .
-                FILTER(STRSTARTS(STR(?class), CONCAT(STR(wd:), "Q")))
+                FILTER(STRSTARTS(STR(?class), "${this.baseUrl}/entity/Q"))
                 OPTIONAL {
                     ?class wdt:P279 ?parent .
                 }
@@ -397,7 +397,9 @@ class WikibaseAPI {
         `;
 
         try {
+            console.log('Fetching classes with query:', query);
             const results = await this.sparqlQuery(query);
+            console.log('Classes query results:', results);
             return this.processSparqlResults(results);
         } catch (error) {
             console.error('Failed to fetch ontology classes:', error);
