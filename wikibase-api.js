@@ -52,16 +52,34 @@ class WikibaseAPI {
             meta: 'tokens',
             type: 'login',
             format: 'json',
-            origin: '*'
+            origin: '*',
+            formatversion: '2'
         });
 
-        const response = await fetch(`${this.apiEndpoint}?${params}`, {
-            method: 'GET',
-            credentials: 'include'
-        });
+        try {
+            const response = await fetch(`${this.apiEndpoint}?${params}`, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
 
-        const data = await response.json();
-        return data.query.tokens.logintoken;
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error.info || 'API error');
+            }
+
+            return data.query.tokens.logintoken;
+        } catch (error) {
+            console.error('getLoginToken error:', error);
+            throw new Error(`Failed to get login token: ${error.message}. Check if ${this.baseUrl} is accessible and CORS is enabled.`);
+        }
     }
 
     /**
@@ -80,7 +98,7 @@ class WikibaseAPI {
         const response = await fetch(this.apiEndpoint, {
             method: 'POST',
             body: params,
-            credentials: 'include',
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
@@ -108,7 +126,7 @@ class WikibaseAPI {
 
         const response = await fetch(`${this.apiEndpoint}?${params}`, {
             method: 'GET',
-            credentials: 'include'
+            mode: 'cors'
         });
 
         const data = await response.json();
@@ -151,7 +169,7 @@ class WikibaseAPI {
 
         const response = await fetch(`${this.apiEndpoint}?${params}`, {
             method: 'GET',
-            credentials: 'include'
+            mode: 'cors'
         });
 
         const data = await response.json();
@@ -171,7 +189,7 @@ class WikibaseAPI {
 
         const response = await fetch(`${this.apiEndpoint}?${params}`, {
             method: 'GET',
-            credentials: 'include'
+            mode: 'cors'
         });
 
         const data = await response.json();
@@ -194,7 +212,7 @@ class WikibaseAPI {
 
         const response = await fetch(`${this.apiEndpoint}?${params}`, {
             method: 'GET',
-            credentials: 'include'
+            mode: 'cors'
         });
 
         const data = await response.json();
@@ -222,7 +240,7 @@ class WikibaseAPI {
         const response = await fetch(this.apiEndpoint, {
             method: 'POST',
             body: params,
-            credentials: 'include',
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
@@ -258,7 +276,7 @@ class WikibaseAPI {
         const response = await fetch(this.apiEndpoint, {
             method: 'POST',
             body: params,
-            credentials: 'include',
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
@@ -302,7 +320,7 @@ class WikibaseAPI {
         const response = await fetch(this.apiEndpoint, {
             method: 'POST',
             body: params,
-            credentials: 'include',
+            mode: 'cors',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
