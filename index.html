@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wikibase Ontology Editor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header>
+            <h1>Wikibase Ontology Editor</h1>
+            <div id="connection-status" class="status-disconnected">Not Connected</div>
+        </header>
+
+        <!-- Login Panel -->
+        <div id="login-panel" class="panel">
+            <h2>Connect to Wikibase</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="wikibase-url">Wikibase URL:</label>
+                    <input type="text" id="wikibase-url" value="https://timna-database.wikibase.cloud" required>
+                </div>
+                <div class="form-group">
+                    <label for="bot-username">Bot Username:</label>
+                    <input type="text" id="bot-username" placeholder="YourBot@YourBotName" required>
+                </div>
+                <div class="form-group">
+                    <label for="bot-password">Bot Password:</label>
+                    <input type="password" id="bot-password" required>
+                </div>
+                <button type="submit">Connect</button>
+            </form>
+        </div>
+
+        <!-- Main Content (hidden until connected) -->
+        <div id="main-content" style="display: none;">
+            <div class="container">
+                <!-- Sidebar with Tree View -->
+                <aside id="sidebar">
+                    <div class="sidebar-header">
+                        <h2>Ontology Structure</h2>
+                        <div class="toolbar">
+                            <input type="text" id="search-box" placeholder="Search classes...">
+                            <button id="refresh-btn" title="Refresh">↻</button>
+                        </div>
+                    </div>
+
+                    <div class="view-mode">
+                        <button id="view-classes" class="active">Classes</button>
+                        <button id="view-properties">Properties</button>
+                    </div>
+
+                    <div id="tree-container" class="tree-view">
+                        <div class="loading">Loading ontology...</div>
+                    </div>
+
+                    <div class="sidebar-footer">
+                        <button id="create-class-btn" class="create-btn">+ New Class</button>
+                        <button id="create-property-btn" class="create-btn">+ New Property</button>
+                    </div>
+                </aside>
+
+                <!-- Main Editor Panel -->
+                <main id="editor-panel">
+                    <div id="welcome-message">
+                        <h2>Welcome to Wikibase Ontology Editor</h2>
+                        <p>Select a class or property from the tree to view and edit its details.</p>
+                    </div>
+
+                    <!-- Entity Editor (shown when item selected) -->
+                    <div id="entity-editor" style="display: none;">
+                        <div class="editor-header">
+                            <h2 id="entity-label">Entity Name</h2>
+                            <span id="entity-id" class="entity-id"></span>
+                        </div>
+
+                        <div class="editor-content">
+                            <!-- Basic Info Section -->
+                            <section class="editor-section">
+                                <h3>Basic Information</h3>
+                                <div class="form-group">
+                                    <label>Label:</label>
+                                    <input type="text" id="edit-label" class="edit-field">
+                                </div>
+                                <div class="form-group">
+                                    <label>Description:</label>
+                                    <textarea id="edit-description" class="edit-field" rows="3"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>Aliases:</label>
+                                    <input type="text" id="edit-aliases" class="edit-field" placeholder="Comma-separated aliases">
+                                </div>
+                            </section>
+
+                            <!-- Statements Section -->
+                            <section class="editor-section">
+                                <h3>Statements</h3>
+                                <div id="statements-list"></div>
+                                <button id="add-statement-btn" class="secondary-btn">+ Add Statement</button>
+                            </section>
+
+                            <!-- Class-specific: Subclasses -->
+                            <section class="editor-section" id="subclasses-section" style="display: none;">
+                                <h3>Subclasses</h3>
+                                <div id="subclasses-list"></div>
+                            </section>
+
+                            <!-- Save/Cancel Buttons -->
+                            <div class="editor-actions">
+                                <button id="save-btn" class="primary-btn">Save Changes</button>
+                                <button id="cancel-btn" class="secondary-btn">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for creating new entities -->
+    <div id="create-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title">Create New Entity</h2>
+            <form id="create-form">
+                <div class="form-group">
+                    <label for="new-label">Label:</label>
+                    <input type="text" id="new-label" required>
+                </div>
+                <div class="form-group">
+                    <label for="new-description">Description:</label>
+                    <textarea id="new-description" rows="3"></textarea>
+                </div>
+                <div class="form-group" id="parent-class-group" style="display: none;">
+                    <label for="parent-class">Parent Class:</label>
+                    <select id="parent-class"></select>
+                </div>
+                <div class="form-group" id="property-datatype-group" style="display: none;">
+                    <label for="property-datatype">Datatype:</label>
+                    <select id="property-datatype">
+                        <option value="wikibase-item">Item</option>
+                        <option value="string">String</option>
+                        <option value="url">URL</option>
+                        <option value="commonsMedia">Commons Media</option>
+                        <option value="time">Time</option>
+                        <option value="quantity">Quantity</option>
+                        <option value="monolingualtext">Monolingual Text</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="primary-btn">Create</button>
+                    <button type="button" class="secondary-btn cancel-modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="wikibase-api.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
