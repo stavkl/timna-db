@@ -379,14 +379,18 @@ class WikibaseAPI {
     }
 
     /**
-     * Get all classes (items that are instances of Q35120 'class' or subclass of something)
+     * Get all classes (all items in the Wikibase)
      */
     async getOntologyClasses() {
-        // This query gets all items that have "subclass of" (P279) statements
-        // Adjust the property IDs based on your Wikibase setup
+        // Get all items (entities starting with Q)
+        // Also try to get their "subclass of" relationship if it exists
         const query = `
             SELECT DISTINCT ?class ?classLabel ?parent ?parentLabel WHERE {
-                ?class wdt:P279 ?parent .
+                ?class ?p ?o .
+                FILTER(STRSTARTS(STR(?class), CONCAT(STR(wd:), "Q")))
+                OPTIONAL {
+                    ?class wdt:P279 ?parent .
+                }
                 SERVICE wikibase:label { bd:serviceParam wikibase:language "en" . }
             }
             ORDER BY ?classLabel
