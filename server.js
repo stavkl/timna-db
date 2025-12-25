@@ -460,10 +460,15 @@ function cleanupSessions() {
 // Clean up sessions every hour
 setInterval(cleanupSessions, 60 * 60 * 1000);
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`\n🚀 Wikibase Proxy Server running on http://localhost:${PORT}`);
-    console.log(`📊 Connected to: ${WIKIBASE_URL}`);
-    console.log(`\n📝 Form Generator:`);
-    console.log(`   • Main Menu: http://localhost:${PORT}/src/index.html\n`);
-});
+// Start server (only for local development)
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`\n🚀 Wikibase Proxy Server running on http://localhost:${PORT}`);
+        console.log(`📊 Connected to: ${WIKIBASE_URL}`);
+        console.log(`\n📝 Form Generator:`);
+        console.log(`   • Main Menu: http://localhost:${PORT}/src/index.html\n`);
+    });
+}
+
+// Export for Vercel serverless
+module.exports = app;
