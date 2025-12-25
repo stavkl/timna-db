@@ -262,6 +262,23 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
             }
         }
 
+        // Check for qualifiers on this property
+        console.log(`Checking for qualifiers on ${propertyId}...`);
+        const qualifiersQuery = buildPropertyQualifiersQuery(formState.config, formState.exemplarId, propertyId);
+        const qualifiers = await executeSparqlQuery(
+            formState.config.wikibase.sparqlEndpoint,
+            qualifiersQuery
+        );
+
+        if (qualifiers.length > 0) {
+            console.log(`  Found ${qualifiers.length} qualifiers`);
+            field.qualifiers = qualifiers.map(q => ({
+                id: q.qualifier.value.split('/').pop(),
+                label: q.qualifierLabel.value,
+                datatype: q.qualifierDatatype.value.split('#').pop()
+            }));
+        }
+
         schema.properties.push(field);
     }
 

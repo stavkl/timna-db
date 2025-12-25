@@ -33,6 +33,38 @@ function buildExemplarPropertiesQuery(config, exemplarId) {
 }
 
 /**
+ * Build query to get qualifiers for a specific property from exemplar
+ */
+function buildPropertyQualifiersQuery(config, exemplarId, propertyId) {
+    return `
+        PREFIX wd: <${config.wikibase.url}/entity/>
+        PREFIX p: <${config.wikibase.url}/prop/>
+        PREFIX ps: <${config.wikibase.url}/prop/statement/>
+        PREFIX pq: <${config.wikibase.url}/prop/qualifier/>
+        PREFIX wikibase: <http://wikiba.se/ontology#>
+        PREFIX bd: <http://www.bigdata.com/rdf#>
+
+        SELECT DISTINCT ?qualifier ?qualifierLabel ?qualifierDatatype
+        WHERE {
+            # Get statements for this property
+            wd:${exemplarId} p:${propertyId} ?statement .
+
+            # Get qualifiers on those statements
+            ?statement ?qualifierProp ?qualifierValue .
+
+            # Get the qualifier property details
+            ?qualifier wikibase:qualifier ?qualifierProp .
+            ?qualifier wikibase:propertyType ?qualifierDatatype .
+
+            SERVICE wikibase:label {
+                bd:serviceParam wikibase:language "en" .
+            }
+        }
+        ORDER BY ?qualifierLabel
+    `;
+}
+
+/**
  * Build query to get all values for a WikibaseItem property across items of the same type
  */
 function buildPropertyValuesQuery(config, propertyId, instanceOfValue) {

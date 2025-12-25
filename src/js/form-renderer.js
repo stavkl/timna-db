@@ -148,11 +148,53 @@ function renderField(field, currentData) {
             inputHTML = `<input type="text" id="${field.id}" name="${field.id}" ${required} value="${currentValue || ''}">`;
     }
 
+    // Render qualifiers if present
+    let qualifiersHTML = '';
+    if (field.qualifiers && field.qualifiers.length > 0) {
+        qualifiersHTML = '<div class="qualifiers-section" style="margin-left: 1.5rem; margin-top: 1rem; padding-left: 1rem; border-left: 3px solid #e5e7eb;">';
+        qualifiersHTML += '<div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Qualifiers:</div>';
+
+        field.qualifiers.forEach(qualifier => {
+            const qualifierId = `${field.id}-qualifier-${qualifier.id}`;
+            const qualifierBadge = `<span class="property-badge" style="font-size: 0.75rem;">${qualifier.id}</span>`;
+
+            let qualifierInputHTML = '';
+            const qualifierInputType = mapDatatypeToInputType(qualifier.datatype);
+
+            switch (qualifierInputType) {
+                case 'text':
+                    qualifierInputHTML = `<input type="text" id="${qualifierId}" name="${qualifierId}" placeholder="${qualifier.label}" style="font-size: 0.875rem;">`;
+                    break;
+                case 'number':
+                    qualifierInputHTML = `<input type="number" id="${qualifierId}" name="${qualifierId}" step="any" placeholder="${qualifier.label}" style="font-size: 0.875rem;">`;
+                    break;
+                case 'url':
+                    qualifierInputHTML = `<input type="url" id="${qualifierId}" name="${qualifierId}" placeholder="${qualifier.label}" style="font-size: 0.875rem;">`;
+                    break;
+                case 'date':
+                    qualifierInputHTML = `<input type="date" id="${qualifierId}" name="${qualifierId}" style="font-size: 0.875rem;">`;
+                    break;
+                default:
+                    qualifierInputHTML = `<input type="text" id="${qualifierId}" name="${qualifierId}" placeholder="${qualifier.label}" style="font-size: 0.875rem;">`;
+            }
+
+            qualifiersHTML += `
+                <div class="field" style="margin-bottom: 0.75rem;">
+                    <label for="${qualifierId}" style="font-size: 0.875rem; font-weight: normal;">${qualifier.label} ${qualifierBadge}</label>
+                    ${qualifierInputHTML}
+                </div>
+            `;
+        });
+
+        qualifiersHTML += '</div>';
+    }
+
     return `
         <div class="field">
             <label for="${field.id}">${field.label}${requiredMark} ${propertyBadge}</label>
             ${inputHTML}
             ${field.description ? `<small>${field.description}</small>` : ''}
+            ${qualifiersHTML}
         </div>
     `;
 }
@@ -307,6 +349,29 @@ function collectFormData() {
 
         if (value) {
             data.properties[field.id] = value;
+
+            // Collect qualifiers for this property
+            if (field.qualifiers && field.qualifiers.length > 0) {
+                const qualifiers = {};
+                field.qualifiers.forEach(qualifier => {
+                    const qualifierId = `${field.id}-qualifier-${qualifier.id}`;
+                    const qualifierElement = document.getElementById(qualifierId);
+                    if (qualifierElement && qualifierElement.value) {
+                        qualifiers[qualifier.id] = {
+                            value: qualifierElement.value,
+                            datatype: qualifier.datatype
+                        };
+                    }
+                });
+
+                if (Object.keys(qualifiers).length > 0) {
+                    // Store qualifiers with the property data
+                    data.properties[field.id] = {
+                        value: value,
+                        qualifiers: qualifiers
+                    };
+                }
+            }
         }
     });
 
@@ -348,11 +413,21 @@ function buildEntityData(formData) {
     }
 
     // Add property claims
-    for (const [propertyId, value] of Object.entries(formData.properties)) {
+    for (const [propertyId, propertyData] of Object.entries(formData.properties)) {
         const field = formState.schema.properties.find(f => f.id === propertyId);
         if (!field) continue;
 
-        const claims = buildClaimForProperty(propertyId, value, field.datatype);
+        // Check if propertyData has qualifiers or is just a value
+        let value, qualifiers;
+        if (propertyData && typeof propertyData === 'object' && propertyData.value !== undefined) {
+            value = propertyData.value;
+            qualifiers = propertyData.qualifiers;
+        } else {
+            value = propertyData;
+            qualifiers = null;
+        }
+
+        const claims = buildClaimForProperty(propertyId, value, field.datatype, qualifiers);
         if (claims) {
             entity.claims[propertyId] = claims;
         }
@@ -364,7 +439,7 @@ function buildEntityData(formData) {
 /**
  * Build claim structure for a property
  */
-function buildClaimForProperty(propertyId, value, datatype) {
+function buildClaimForProperty(propertyId, value, datatype, qualifiers = null) {
     const claims = [];
 
     // Handle multi-value properties
@@ -439,7 +514,7 @@ function buildClaimForProperty(propertyId, value, datatype) {
                 };
         }
 
-        claims.push({
+        const claim = {
             mainsnak: {
                 snaktype: 'value',
                 property: propertyId,
@@ -447,10 +522,94 @@ function buildClaimForProperty(propertyId, value, datatype) {
             },
             type: 'statement',
             rank: 'normal'
-        });
+        };
+
+        // Add qualifiers if present
+        if (qualifiers && Object.keys(qualifiers).length > 0) {
+            claim.qualifiers = {};
+            for (const [qualifierId, qualifierData] of Object.entries(qualifiers)) {
+                const qualifierDatavalue = buildDatavalueForType(
+                    qualifierData.value,
+                    qualifierData.datatype
+                );
+                if (qualifierDatavalue) {
+                    claim.qualifiers[qualifierId] = [{
+                        snaktype: 'value',
+                        property: qualifierId,
+                        datavalue: qualifierDatavalue
+                    }];
+                }
+            }
+        }
+
+        claims.push(claim);
     });
 
     return claims.length > 0 ? claims : null;
+}
+
+/**
+ * Build datavalue structure for a given type
+ */
+function buildDatavalueForType(value, datatype) {
+    switch (datatype) {
+        case 'WikibaseItem':
+            return {
+                value: {
+                    'entity-type': 'item',
+                    'numeric-id': parseInt(value.substring(1)),
+                    id: value
+                },
+                type: 'wikibase-entityid'
+            };
+
+        case 'String':
+        case 'ExternalId':
+        case 'Url':
+            return {
+                value: value,
+                type: 'string'
+            };
+
+        case 'Quantity':
+            return {
+                value: {
+                    amount: '+' + value,
+                    unit: '1'
+                },
+                type: 'quantity'
+            };
+
+        case 'Time':
+            return {
+                value: {
+                    time: '+' + value + 'T00:00:00Z',
+                    timezone: 0,
+                    before: 0,
+                    after: 0,
+                    precision: 11,
+                    calendarmodel: 'http://www.wikidata.org/entity/Q1985727'
+                },
+                type: 'time'
+            };
+
+        case 'GlobeCoordinate':
+            return {
+                value: {
+                    latitude: value.latitude,
+                    longitude: value.longitude,
+                    precision: 0.0001,
+                    globe: 'http://www.wikidata.org/entity/Q2'
+                },
+                type: 'globecoordinate'
+            };
+
+        default:
+            return {
+                value: value,
+                type: 'string'
+            };
+    }
 }
 
 /**
