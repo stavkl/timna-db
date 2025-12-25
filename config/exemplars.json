@@ -12,6 +12,12 @@
       "label": "Locus",
       "description": "A defined point or unit in three-dimensional space"
     },
+    "Feature": {
+      "id": "Q1455",
+      "url": "https://timna-database.wikibase.cloud/wiki/Item:Q1455",
+      "label": "Feature",
+      "description": "A non-portable element of an archaeological site or excavation"
+    },
     "Basket": {
       "id": "Q856",
       "url": "https://timna-database.wikibase.cloud/wiki/Item:Q856",
