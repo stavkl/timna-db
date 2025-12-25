@@ -793,6 +793,16 @@ function buildClaimForProperty(propertyId, value, datatype, qualifiers = null) {
                 };
                 break;
 
+            case 'Monolingualtext':
+                datavalue = {
+                    value: {
+                        text: val,
+                        language: 'en'
+                    },
+                    type: 'monolingualtext'
+                };
+                break;
+
             case 'Quantity':
                 datavalue = {
                     value: {
@@ -891,6 +901,15 @@ function buildDatavalueForType(value, datatype) {
             return {
                 value: value,
                 type: 'string'
+            };
+
+        case 'Monolingualtext':
+            return {
+                value: {
+                    text: value,
+                    language: 'en'
+                },
+                type: 'monolingualtext'
             };
 
         case 'Quantity':
