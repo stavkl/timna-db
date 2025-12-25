@@ -327,23 +327,25 @@ function buildEntityData(formData) {
         claims: {}
     };
 
-    // Add Instance Of claim (required for all items)
-    entity.claims[formState.config.properties.instanceOf] = [{
-        mainsnak: {
-            snaktype: 'value',
-            property: formState.config.properties.instanceOf,
-            datavalue: {
-                value: {
-                    'entity-type': 'item',
-                    'numeric-id': parseInt(formState.instanceOfValue.substring(1)),
-                    id: formState.instanceOfValue
-                },
-                type: 'wikibase-entityid'
-            }
-        },
-        type: 'statement',
-        rank: 'normal'
-    }];
+    // Add Instance Of claim (only for new items, not updates)
+    if (formState.mode === 'create') {
+        entity.claims[formState.config.properties.instanceOf] = [{
+            mainsnak: {
+                snaktype: 'value',
+                property: formState.config.properties.instanceOf,
+                datavalue: {
+                    value: {
+                        'entity-type': 'item',
+                        'numeric-id': parseInt(formState.instanceOfValue.substring(1)),
+                        id: formState.instanceOfValue
+                    },
+                    type: 'wikibase-entityid'
+                }
+            },
+            type: 'statement',
+            rank: 'normal'
+        }];
+    }
 
     // Add property claims
     for (const [propertyId, value] of Object.entries(formData.properties)) {
