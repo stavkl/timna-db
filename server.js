@@ -17,7 +17,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files (your frontend)
-app.use(express.static('.'));
+const path = require('path');
+app.use(express.static(path.join(__dirname)));
 
 // Configuration
 const WIKIBASE_URL = process.env.WIKIBASE_URL || 'https://timna-database.wikibase.cloud';
