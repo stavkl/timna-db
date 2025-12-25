@@ -42,7 +42,7 @@ function renderForm(currentData = null) {
         html += '<button type="submit" class="btn btn-primary">Update Item</button>';
     }
     html += '<a href="/src/index.html" class="btn btn-secondary">Cancel</a>';
-    html += '<a href="https://github.com/stavkl/timna-db/issues/new" target="_blank" class="btn btn-secondary">Report an Issue</a>';
+    html += '<a href="https://github.com/stavkl/timna-db/issues/new" target="_blank" class="btn btn-secondary" style="background-color: #10b981; color: white; border-color: #10b981;"><img src="https://github.com/favicon.ico" alt="GitHub" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 0.5rem;">Report an Issue</a>';
     html += '</div>';
 
     container.innerHTML = html;
@@ -915,7 +915,7 @@ function showSuccessMessage(result) {
                 ${formState.mode === 'create' ?
                     `<button onclick="location.reload()" class="btn btn-secondary">Create Another</button>` :
                     ''}
-                <a href="https://github.com/stavkl/timna-db/issues/new" target="_blank" class="btn btn-secondary">Report an Issue</a>
+                <a href="https://github.com/stavkl/timna-db/issues/new" target="_blank" class="btn btn-secondary" style="background-color: #10b981; color: white; border-color: #10b981;"><img src="https://github.com/favicon.ico" alt="GitHub" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 0.5rem;">Report an Issue</a>
             </div>
         </div>
     `;
