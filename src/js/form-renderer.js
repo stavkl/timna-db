@@ -758,6 +758,7 @@ function buildEntityData(formData) {
         }
     }
 
+    console.log('Built entity data for submission:', JSON.stringify(entity, null, 2));
     return entity;
 }
 
@@ -862,7 +863,11 @@ function buildClaimForProperty(propertyId, value, datatype, qualifiers = null, s
         // Add statement ID if updating an existing statement (this tells Wikibase to update instead of create)
         // Only include if statementId is a non-empty string with valid GUID format (Q###-GUID)
         if (statementId && typeof statementId === 'string' && statementId.trim() && statementId.includes('-')) {
-            claim.id = statementId.trim();
+            const trimmedId = statementId.trim();
+            console.log(`Adding statement ID to claim: ${trimmedId} for property ${propertyId}`);
+            claim.id = trimmedId;
+        } else if (statementId) {
+            console.warn(`Skipping invalid statement ID: "${statementId}" for property ${propertyId}`);
         }
 
         // Add qualifiers if present

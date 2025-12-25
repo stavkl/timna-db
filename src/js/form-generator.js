@@ -367,6 +367,10 @@ function processItemData(itemData, labelDescResults) {
             ? statementUri.split('/statement/').pop()
             : null;
 
+        if (statementGuid) {
+            console.log(`Extracted statement GUID: "${statementGuid}" from URI: ${statementUri}`);
+        }
+
         // Create statement entry if doesn't exist
         if (!statementMap.has(statementUri)) {
             let mainValue;
