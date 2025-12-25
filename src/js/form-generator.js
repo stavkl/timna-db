@@ -166,6 +166,13 @@ async function generateEditForm() {
         formState.currentData = processItemData(itemData, labelDescResults);
         console.log('Current item data:', formState.currentData);
 
+        // DEBUG: Log properties to check what's included
+        console.log('=== CURRENT DATA DEBUG ===');
+        console.log('Properties in currentData:', Object.keys(formState.currentData.properties));
+        for (const [propId, values] of Object.entries(formState.currentData.properties)) {
+            console.log(`  ${propId}: ${values.length} value(s)`, values);
+        }
+
         // Step 3: Get properties from exemplar
         showLoadingMessage('Discovering properties...');
         const propertiesQuery = buildExemplarPropertiesQuery(formState.config, formState.exemplarId);
@@ -216,13 +223,16 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
     });
 
     // Process each property
+    console.log(`=== BUILDING SCHEMA FROM ${properties.length} PROPERTIES ===`);
     for (const prop of properties) {
         const propertyId = prop.property.value.split('/').pop();
         const datatype = prop.datatype.value.split('#').pop();
+        console.log(`Processing property ${propertyId} (${prop.propertyLabel.value}) - datatype: ${datatype}`);
 
         // Skip Instance Of property in create mode (set automatically)
         // In edit mode, show it so users can see/modify multiple Instance Of values
         if (propertyId === formState.config.properties.instanceOf && formState.mode === 'create') {
+            console.log(`  Skipping ${propertyId} (Instance Of in create mode)`);
             continue;
         }
 
@@ -334,6 +344,9 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
 
         schema.properties.push(field);
     }
+
+    console.log('=== FINAL SCHEMA ===');
+    console.log(`Schema has ${schema.properties.length} properties:`, schema.properties.map(p => `${p.id} (${p.label})`));
 
     return schema;
 }

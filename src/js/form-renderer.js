@@ -70,6 +70,12 @@ function renderField(field, currentData) {
         ? `<span class="property-badge">${field.id}</span>`
         : '';
 
+    // DEBUG: Log which field is being rendered
+    console.log(`Rendering field: ${field.id} (${field.label}), has qualifiers: ${!!(field.qualifiers && field.qualifiers.length > 0)}`);
+    if (currentData && currentData.properties && currentData.properties[field.id]) {
+        console.log(`  Existing data for ${field.id}:`, currentData.properties[field.id]);
+    }
+
     // Special handling for basic fields (label, description)
     if (field.isSpecial) {
         const currentValue = currentData ? (currentData[field.id] || '') : '';
@@ -115,11 +121,18 @@ function renderSimpleField(field, currentData) {
 
     if (currentData) {
         const propData = currentData.properties[field.id];
+        console.log(`  renderSimpleField for ${field.id}: propData =`, propData);
         if (propData) {
             if (field.type === 'multiselect') {
-                currentValues = propData.map(v => v.id);
-            } else if (propData.length > 0) {
-                currentValue = typeof propData[0] === 'object' ? propData[0].id : propData[0];
+                currentValues = propData.map(v => v.value || v);
+                console.log(`    multiselect: extracted ${currentValues.length} values`);
+            } else if (Array.isArray(propData) && propData.length > 0) {
+                // propData is array of {value, qualifiers, statementId}
+                const firstItem = propData[0];
+                currentValue = typeof firstItem === 'object' && firstItem.value
+                    ? (typeof firstItem.value === 'object' ? firstItem.value.id : firstItem.value)
+                    : firstItem;
+                console.log(`    Got first value: ${currentValue}`);
             }
         }
     }
@@ -218,14 +231,17 @@ function renderRepeatableFieldWithQualifiers(field, currentData) {
 
     // Get existing values from currentData
     const existingValues = currentData?.properties?.[field.id] || [];
+    console.log(`  renderRepeatableFieldWithQualifiers for ${field.id}: found ${existingValues.length} existing values`, existingValues);
 
     if (existingValues.length > 0) {
         // Render each existing value with its qualifiers
         existingValues.forEach((valueData, index) => {
+            console.log(`    Rendering value ${index}:`, valueData);
             html += renderValueWithQualifiers(field, index, valueData);
         });
     } else {
         // Show one empty value section if no existing data
+        console.log(`    No existing values, showing empty section`);
         html += renderValueWithQualifiers(field, 0, null);
     }
 
