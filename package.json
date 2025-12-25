@@ -1,0 +1,20 @@
+{
+  "name": "wikibase-ontology-editor",
+  "version": "1.0.0",
+  "description": "A web-based tool for viewing and editing Wikibase ontologies in a simple, intuitive interface. Built specifically for teams working with Wikibase Cloud instances who need a more user-friendly way to manage their knowledge graph structure.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.22.1",
+    "node-fetch": "^2.7.0"
+  }
+}

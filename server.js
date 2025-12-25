@@ -1,0 +1,366 @@
+/**
+ * Backend Proxy Server for Wikibase API
+ * Handles authentication and bypasses CORS restrictions
+ */
+
+const express = require('express');
+const cors = require('cors');
+const fetch = require('node-fetch');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files (your frontend)
+app.use(express.static('.'));
+
+// Configuration
+const WIKIBASE_URL = process.env.WIKIBASE_URL || 'https://timna-database.wikibase.cloud';
+const API_ENDPOINT = `${WIKIBASE_URL}/w/api.php`;
+
+// Store session data (in production, use Redis or database)
+const sessions = new Map();
+
+/**
+ * Login endpoint - authenticates with Wikibase and stores session
+ */
+app.post('/api/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password required' });
+    }
+
+    try {
+        // Step 1: Get login token
+        const tokenResponse = await fetch(`${API_ENDPOINT}?action=query&meta=tokens&type=login&format=json`);
+        const tokenData = await tokenResponse.json();
+        const loginToken = tokenData.query.tokens.logintoken;
+
+        // Extract cookies from token response
+        const cookies = tokenResponse.headers.raw()['set-cookie'] || [];
+        const cookieHeader = cookies.map(cookie => cookie.split(';')[0]).join('; ');
+
+        // Step 2: Login with cookies
+        const loginParams = new URLSearchParams({
+            action: 'login',
+            lgname: username,
+            lgpassword: password,
+            lgtoken: loginToken,
+            format: 'json'
+        });
+
+        const loginResponse = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            body: loginParams,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cookie': cookieHeader
+            }
+        });
+
+        const loginData = await loginResponse.json();
+
+        console.log('Login response:', JSON.stringify(loginData, null, 2));
+
+        if (loginData.login.result !== 'Success') {
+            const errorMsg = loginData.login.reason || loginData.login.result;
+            return res.status(401).json({ error: `Login failed: ${errorMsg}` });
+        }
+
+        // Merge cookies from login response
+        const loginCookies = loginResponse.headers.raw()['set-cookie'] || [];
+        const allCookies = [...cookies, ...loginCookies];
+        const finalCookieHeader = allCookies.map(cookie => cookie.split(';')[0]).join('; ');
+
+        // Step 3: Get CSRF token for editing with cookies
+        const csrfResponse = await fetch(`${API_ENDPOINT}?action=query&meta=tokens&format=json`, {
+            headers: {
+                'Cookie': finalCookieHeader
+            }
+        });
+        const csrfData = await csrfResponse.json();
+        const csrfToken = csrfData.query.tokens.csrftoken;
+
+        // Store session
+        const sessionId = generateSessionId();
+        sessions.set(sessionId, {
+            username,
+            password,
+            csrfToken,
+            loginToken,
+            cookies: finalCookieHeader,
+            createdAt: Date.now()
+        });
+
+        // Clean up old sessions (older than 1 hour)
+        cleanupSessions();
+
+        res.json({
+            success: true,
+            sessionId,
+            message: 'Logged in successfully'
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Create new item endpoint
+ */
+app.post('/api/create-item', async (req, res) => {
+    const { sessionId, data } = req.body;
+
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+
+    const session = sessions.get(sessionId);
+
+    try {
+        const params = new URLSearchParams({
+            action: 'wbeditentity',
+            new: 'item',
+            data: JSON.stringify(data),
+            summary: 'Created via Archaeological Site Form',
+            token: session.csrfToken,
+            format: 'json'
+        });
+
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            body: params,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cookie': session.cookies
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            return res.status(400).json({ error: result.error.info });
+        }
+
+        res.json({ success: true, entity: result.entity });
+
+    } catch (error) {
+        console.error('Create item error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Add statement/claim to existing item
+ */
+app.post('/api/add-claim', async (req, res) => {
+    const { sessionId, entityId, property, value, datatype } = req.body;
+
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+
+    const session = sessions.get(sessionId);
+
+    try {
+        // Build the claim based on datatype
+        const datavalue = buildDataValue(value, datatype);
+
+        const claim = {
+            mainsnak: {
+                snaktype: 'value',
+                property: property,
+                datavalue: datavalue
+            },
+            type: 'statement'
+        };
+
+        const params = new URLSearchParams({
+            action: 'wbsetclaim',
+            claim: JSON.stringify(claim),
+            summary: 'Added via Archaeological Site Form',
+            token: session.csrfToken,
+            format: 'json'
+        });
+
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            body: params,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cookie': session.cookies
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            return res.status(400).json({ error: result.error.info });
+        }
+
+        res.json({ success: true, claim: result.claim });
+
+    } catch (error) {
+        console.error('Add claim error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Set label, description, or alias
+ */
+app.post('/api/set-label', async (req, res) => {
+    const { sessionId, entityId, labels, descriptions, aliases } = req.body;
+
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.status(401).json({ error: 'Invalid or expired session' });
+    }
+
+    const session = sessions.get(sessionId);
+
+    try {
+        const data = {};
+        if (labels) data.labels = labels;
+        if (descriptions) data.descriptions = descriptions;
+        if (aliases) data.aliases = aliases;
+
+        const params = new URLSearchParams({
+            action: 'wbeditentity',
+            id: entityId,
+            data: JSON.stringify(data),
+            summary: 'Updated via Archaeological Site Form',
+            token: session.csrfToken,
+            format: 'json'
+        });
+
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            body: params,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cookie': session.cookies
+            }
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            return res.status(400).json({ error: result.error.info });
+        }
+
+        res.json({ success: true, entity: result.entity });
+
+    } catch (error) {
+        console.error('Set label error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Health check endpoint
+ */
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', wikibaseUrl: WIKIBASE_URL });
+});
+
+/**
+ * Helper: Build datavalue based on type
+ */
+function buildDataValue(value, datatype) {
+    switch (datatype) {
+        case 'wikibase-item':
+            return {
+                value: {
+                    'entity-type': 'item',
+                    'numeric-id': parseInt(value.replace('Q', '')),
+                    id: value
+                },
+                type: 'wikibase-entityid'
+            };
+
+        case 'string':
+        case 'url':
+        case 'external-id':
+            return {
+                value: value,
+                type: 'string'
+            };
+
+        case 'quantity':
+            return {
+                value: {
+                    amount: value.toString(),
+                    unit: '1'
+                },
+                type: 'quantity'
+            };
+
+        case 'time':
+            return {
+                value: {
+                    time: value,
+                    timezone: 0,
+                    before: 0,
+                    after: 0,
+                    precision: 11,
+                    calendarmodel: 'http://www.wikidata.org/entity/Q1985727'
+                },
+                type: 'time'
+            };
+
+        case 'globe-coordinate':
+            return {
+                value: {
+                    latitude: parseFloat(value.lat),
+                    longitude: parseFloat(value.lon),
+                    altitude: null,
+                    precision: 0.0001,
+                    globe: 'http://www.wikidata.org/entity/Q2'
+                },
+                type: 'globecoordinate'
+            };
+
+        default:
+            return {
+                value: value,
+                type: 'string'
+            };
+    }
+}
+
+/**
+ * Helper: Generate session ID
+ */
+function generateSessionId() {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+/**
+ * Helper: Clean up old sessions
+ */
+function cleanupSessions() {
+    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    for (const [sessionId, session] of sessions.entries()) {
+        if (session.createdAt < oneHourAgo) {
+            sessions.delete(sessionId);
+        }
+    }
+}
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`\n🚀 Wikibase Proxy Server running on http://localhost:${PORT}`);
+    console.log(`📊 Connected to: ${WIKIBASE_URL}`);
+    console.log(`\n📝 Available Forms:`);
+    console.log(`   • Dynamic Form (recommended): http://localhost:${PORT}/dynamic-form.html`);
+    console.log(`   • Static Site Form: http://localhost:${PORT}/site-form.html`);
+    console.log(`   • Simple Form: http://localhost:${PORT}/simple-form.html\n`);
+});
