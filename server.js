@@ -88,16 +88,22 @@ app.post('/api/login', async (req, res) => {
         const csrfData = await csrfResponse.json();
         const csrfToken = csrfData.query.tokens.csrftoken;
 
-        // Store session
-        const sessionId = generateSessionId();
-        sessions.set(sessionId, {
+        // Create session data
+        const sessionData = {
             username,
             password,
             csrfToken,
             loginToken,
             cookies: finalCookieHeader,
             createdAt: Date.now()
-        });
+        };
+
+        // For Vercel serverless, encode session data as the sessionId
+        // In production, use a proper session store like Redis
+        const sessionId = Buffer.from(JSON.stringify(sessionData)).toString('base64');
+
+        // Also store in memory for local development
+        sessions.set(sessionId, sessionData);
 
         // Clean up old sessions (older than 1 hour)
         cleanupSessions();
@@ -120,11 +126,10 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/create-item', async (req, res) => {
     const { sessionId, data } = req.body;
 
-    if (!sessionId || !sessions.has(sessionId)) {
+    const session = getSession(sessionId);
+    if (!session) {
         return res.status(401).json({ error: 'Invalid or expired session' });
     }
-
-    const session = sessions.get(sessionId);
 
     try {
         const params = new URLSearchParams({
@@ -165,11 +170,10 @@ app.post('/api/create-item', async (req, res) => {
 app.post('/api/add-claim', async (req, res) => {
     const { sessionId, entityId, property, value, datatype } = req.body;
 
-    if (!sessionId || !sessions.has(sessionId)) {
+    const session = getSession(sessionId);
+    if (!session) {
         return res.status(401).json({ error: 'Invalid or expired session' });
     }
-
-    const session = sessions.get(sessionId);
 
     try {
         // Build the claim based on datatype
@@ -221,11 +225,10 @@ app.post('/api/add-claim', async (req, res) => {
 app.post('/api/set-label', async (req, res) => {
     const { sessionId, entityId, labels, descriptions, aliases } = req.body;
 
-    if (!sessionId || !sessions.has(sessionId)) {
+    const session = getSession(sessionId);
+    if (!session) {
         return res.status(401).json({ error: 'Invalid or expired session' });
     }
-
-    const session = sessions.get(sessionId);
 
     try {
         const data = {};
@@ -371,21 +374,47 @@ function generateSessionId() {
 }
 
 /**
+ * Helper: Get session from sessionId (works with in-memory and encoded sessions)
+ */
+function getSession(sessionId) {
+    if (!sessionId) {
+        return null;
+    }
+
+    // Try in-memory first (for local development)
+    if (sessions.has(sessionId)) {
+        return sessions.get(sessionId);
+    }
+
+    // Try decoding base64 sessionId (for Vercel serverless)
+    try {
+        const sessionData = JSON.parse(Buffer.from(sessionId, 'base64').toString('utf-8'));
+        // Verify session hasn't expired (1 hour)
+        if (Date.now() - sessionData.createdAt < 60 * 60 * 1000) {
+            return sessionData;
+        }
+    } catch (error) {
+        console.error('Failed to decode session:', error);
+    }
+
+    return null;
+}
+
+/**
  * Create new entity endpoint
  */
 app.post('/api/create-entity', async (req, res) => {
     const sessionId = req.headers['x-session-id'];
     const { entity } = req.body;
 
-    if (!sessionId || !sessions.has(sessionId)) {
+    const session = getSession(sessionId);
+    if (!session) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
     if (!entity) {
         return res.status(400).json({ error: 'Entity data required' });
     }
-
-    const session = sessions.get(sessionId);
 
     try {
         // Create the entity via Wikibase API
@@ -428,15 +457,14 @@ app.post('/api/update-entity/:id', async (req, res) => {
     const { entity } = req.body;
     const itemId = req.params.id;
 
-    if (!sessionId || !sessions.has(sessionId)) {
+    const session = getSession(sessionId);
+    if (!session) {
         return res.status(401).json({ error: 'Not authenticated' });
     }
 
     if (!entity) {
         return res.status(400).json({ error: 'Entity data required' });
     }
-
-    const session = sessions.get(sessionId);
 
     try {
         // Update the entity via Wikibase API
