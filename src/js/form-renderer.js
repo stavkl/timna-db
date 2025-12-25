@@ -656,7 +656,7 @@ function collectFormData() {
                 valuesWithQualifiers.push({
                     value: mainValue,
                     qualifiers: Object.keys(qualifiers).length > 0 ? qualifiers : null,
-                    statementId: statementId || null  // Include statement ID if editing existing statement
+                    statementId: (statementId && statementId.trim()) ? statementId.trim() : null  // Include statement ID if editing existing statement
                 });
             });
 
@@ -860,8 +860,9 @@ function buildClaimForProperty(propertyId, value, datatype, qualifiers = null, s
         };
 
         // Add statement ID if updating an existing statement (this tells Wikibase to update instead of create)
-        if (statementId) {
-            claim.id = statementId;
+        // Only include if statementId is a non-empty string with valid GUID format (Q###-GUID)
+        if (statementId && typeof statementId === 'string' && statementId.trim() && statementId.includes('-')) {
+            claim.id = statementId.trim();
         }
 
         // Add qualifiers if present
