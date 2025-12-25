@@ -220,8 +220,9 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
         const propertyId = prop.property.value.split('/').pop();
         const datatype = prop.datatype.value.split('#').pop();
 
-        // Skip Instance Of property (set automatically)
-        if (propertyId === formState.config.properties.instanceOf) {
+        // Skip Instance Of property in create mode (set automatically)
+        // In edit mode, show it so users can see/modify multiple Instance Of values
+        if (propertyId === formState.config.properties.instanceOf && formState.mode === 'create') {
             continue;
         }
 
@@ -361,6 +362,11 @@ function processItemData(itemData, labelDescResults) {
         const statementUri = row.statement.value;
         const datatype = row.datatype.value.split('#').pop();
 
+        // Extract statement GUID from URI (format: http://.../entity/statement/Q827-GUID)
+        const statementGuid = statementUri.includes('/statement/')
+            ? statementUri.split('/statement/').pop()
+            : null;
+
         // Create statement entry if doesn't exist
         if (!statementMap.has(statementUri)) {
             let mainValue;
@@ -376,7 +382,8 @@ function processItemData(itemData, labelDescResults) {
             statementMap.set(statementUri, {
                 propertyId,
                 value: mainValue,
-                qualifiers: {}
+                qualifiers: {},
+                statementId: statementGuid  // Store the statement GUID for updates
             });
         }
 
@@ -411,7 +418,8 @@ function processItemData(itemData, labelDescResults) {
 
         processed.properties[statement.propertyId].push({
             value: statement.value,
-            qualifiers: Object.keys(statement.qualifiers).length > 0 ? statement.qualifiers : null
+            qualifiers: Object.keys(statement.qualifiers).length > 0 ? statement.qualifiers : null,
+            statementId: statement.statementId  // Include statement ID for updates
         });
     }
 

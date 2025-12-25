@@ -246,9 +246,10 @@ function renderRepeatableFieldWithQualifiers(field, currentData) {
 function renderValueWithQualifiers(field, index, valueData) {
     const uniqueId = `${field.id}-${index}`;
     const sectionId = `${uniqueId}-section`;
+    const statementId = valueData?.statementId || '';  // Get statement ID if exists
 
     let html = `
-        <div id="${sectionId}" class="value-section" style="padding: 1rem; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 4px; background: #f9fafb;" data-field-id="${field.id}" data-index="${index}">
+        <div id="${sectionId}" class="value-section" style="padding: 1rem; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 4px; background: #f9fafb;" data-field-id="${field.id}" data-index="${index}" data-statement-id="${statementId}">
     `;
 
     // Render main value input
@@ -620,6 +621,7 @@ function collectFormData() {
             valueSections.forEach(section => {
                 const index = section.getAttribute('data-index');
                 const uniqueId = `${field.id}-${index}`;
+                const statementId = section.getAttribute('data-statement-id');  // Get existing statement ID
 
                 // Get main value
                 let mainValue = null;
@@ -650,10 +652,11 @@ function collectFormData() {
                     }
                 });
 
-                // Add this value with its qualifiers
+                // Add this value with its qualifiers and statement ID (for updates)
                 valuesWithQualifiers.push({
                     value: mainValue,
-                    qualifiers: Object.keys(qualifiers).length > 0 ? qualifiers : null
+                    qualifiers: Object.keys(qualifiers).length > 0 ? qualifiers : null,
+                    statementId: statementId || null  // Include statement ID if editing existing statement
                 });
             });
 
@@ -737,14 +740,14 @@ function buildEntityData(formData) {
         if (Array.isArray(propertyData) && propertyData.length > 0 && typeof propertyData[0] === 'object' && propertyData[0].value !== undefined) {
             // Multiple values with qualifiers
             for (const valueWithQualifiers of propertyData) {
-                const claim = buildClaimForProperty(propertyId, valueWithQualifiers.value, field.datatype, valueWithQualifiers.qualifiers);
+                const claim = buildClaimForProperty(propertyId, valueWithQualifiers.value, field.datatype, valueWithQualifiers.qualifiers, valueWithQualifiers.statementId);
                 if (claim && claim.length > 0) {
                     claims.push(...claim);
                 }
             }
         } else {
             // Old structure: simple value or array of values
-            const claim = buildClaimForProperty(propertyId, propertyData, field.datatype, null);
+            const claim = buildClaimForProperty(propertyId, propertyData, field.datatype, null, null);
             if (claim) {
                 claims = claim;
             }
@@ -761,7 +764,7 @@ function buildEntityData(formData) {
 /**
  * Build claim structure for a property
  */
-function buildClaimForProperty(propertyId, value, datatype, qualifiers = null) {
+function buildClaimForProperty(propertyId, value, datatype, qualifiers = null, statementId = null) {
     const claims = [];
 
     // Handle multi-value properties
@@ -855,6 +858,11 @@ function buildClaimForProperty(propertyId, value, datatype, qualifiers = null) {
             type: 'statement',
             rank: 'normal'
         };
+
+        // Add statement ID if updating an existing statement (this tells Wikibase to update instead of create)
+        if (statementId) {
+            claim.id = statementId;
+        }
 
         // Add qualifiers if present
         if (qualifiers && Object.keys(qualifiers).length > 0) {
