@@ -160,7 +160,7 @@ function renderField(field, currentData) {
 /**
  * Add custom value to multi-select
  */
-function addCustomValue(fieldId) {
+async function addCustomValue(fieldId) {
     const customInput = document.getElementById(`${fieldId}-custom`);
     const select = document.getElementById(fieldId);
 
@@ -187,10 +187,43 @@ function addCustomValue(fieldId) {
         return;
     }
 
-    // Add new option
+    // Fetch label from Wikibase
+    let label = qNumber;
+    try {
+        const labelQuery = `
+            PREFIX wd: <${formState.config.wikibase.url}/entity/>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+            SELECT ?label
+            WHERE {
+                wd:${qNumber} rdfs:label ?label .
+                FILTER(LANG(?label) = "en")
+            }
+            LIMIT 1
+        `;
+
+        const results = await executeSparqlQuery(
+            formState.config.wikibase.sparqlEndpoint,
+            labelQuery
+        );
+
+        if (results.length > 0) {
+            label = results[0].label.value;
+        } else {
+            // Item exists but has no English label
+            label = qNumber;
+            console.warn(`No English label found for ${qNumber}`);
+        }
+    } catch (error) {
+        console.error('Error fetching label:', error);
+        // Fall back to Q number if query fails
+        label = qNumber;
+    }
+
+    // Add new option with label
     const option = document.createElement('option');
     option.value = qNumber;
-    option.text = `${qNumber} (custom)`;
+    option.text = `${label} (${qNumber})`;
     option.selected = true;
     select.appendChild(option);
 

@@ -39,19 +39,21 @@ function buildPropertyValuesQuery(config, propertyId, instanceOfValue) {
     return `
         PREFIX wd: <${config.wikibase.url}/entity/>
         PREFIX wdt: <${config.wikibase.url}/prop/direct/>
+        PREFIX p: <${config.wikibase.url}/prop/>
+        PREFIX ps: <${config.wikibase.url}/prop/statement/>
         PREFIX wikibase: <http://wikiba.se/ontology#>
         PREFIX bd: <http://www.bigdata.com/rdf#>
 
         SELECT DISTINCT ?value ?valueLabel
         WHERE {
-            # Get all items of this type
+            # Get all items of this type (including the exemplar)
             ?item wdt:${config.properties.instanceOf} wd:${instanceOfValue} .
 
             # Get values for this specific property
             ?item wdt:${propertyId} ?value .
 
             # Ensure value is an item (not a literal)
-            ?value a wikibase:Item .
+            FILTER(isIRI(?value))
 
             SERVICE wikibase:label {
                 bd:serviceParam wikibase:language "en" .

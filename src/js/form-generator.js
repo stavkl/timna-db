@@ -141,7 +141,7 @@ async function generateEditForm() {
         const entityTypeName = instanceOfResults[0].instanceOfLabel?.value || formState.instanceOfValue;
 
         // Find matching exemplar
-        formState.exemplarId = findExemplarByInstanceOf(formState.instanceOfValue);
+        formState.exemplarId = await findExemplarByInstanceOf(formState.instanceOfValue);
         if (!formState.exemplarId) {
             throw new Error(`No exemplar configured for type: ${entityTypeName}`);
         }
@@ -238,22 +238,26 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
         // For WikibaseItem properties, get all possible values
         if (datatype === 'WikibaseItem') {
             console.log(`Fetching values for ${propertyId} (${field.label})...`);
+            console.log(`  Instance Of value: ${instanceOfValue}`);
             const valuesQuery = buildPropertyValuesQuery(formState.config, propertyId, instanceOfValue);
+            console.log(`  SPARQL Query:`, valuesQuery);
             const values = await executeSparqlQuery(
                 formState.config.wikibase.sparqlEndpoint,
                 valuesQuery
             );
 
+            console.log(`  Query returned ${values.length} results`);
             if (values.length > 0) {
+                console.log(`  Sample values:`, values.slice(0, 3));
                 field.values = values.map(v => ({
                     id: v.value.value.split('/').pop(),
                     label: v.valueLabel.value
                 }));
                 field.type = 'multiselect';
                 field.allowMultiple = true;
-                console.log(`  Found ${field.values.length} values`);
+                console.log(`  ✓ Set field type to multiselect with ${field.values.length} values`);
             } else {
-                console.log(`  No existing values found, will use item input`);
+                console.log(`  ✗ No existing values found, will use item input`);
                 field.type = 'item-input';
             }
         }
@@ -309,17 +313,37 @@ function processItemData(itemData, labelDescResults) {
 
 /**
  * Find exemplar ID by Instance Of value
+ * This queries each exemplar to find which one has the matching Instance Of
  */
-function findExemplarByInstanceOf(instanceOfValue) {
+async function findExemplarByInstanceOf(instanceOfValue) {
+    console.log(`Looking for exemplar with Instance Of: ${instanceOfValue}`);
+
+    // Check each exemplar to see which one has this Instance Of value
     for (const [key, exemplar] of Object.entries(formState.config.exemplars)) {
-        if (exemplar.id === instanceOfValue) {
-            return exemplar.id;
+        try {
+            const instanceOfQuery = buildInstanceOfQuery(formState.config, exemplar.id);
+            const results = await executeSparqlQuery(
+                formState.config.wikibase.sparqlEndpoint,
+                instanceOfQuery
+            );
+
+            if (results.length > 0) {
+                const exemplarInstanceOf = results[0].instanceOf.value.split('/').pop();
+                console.log(`  Exemplar ${exemplar.id} (${key}) has Instance Of: ${exemplarInstanceOf}`);
+
+                if (exemplarInstanceOf === instanceOfValue) {
+                    console.log(`  ✓ Found matching exemplar: ${exemplar.id} for type ${instanceOfValue}`);
+                    return exemplar.id;
+                }
+            }
+        } catch (error) {
+            console.warn(`Error checking exemplar ${exemplar.id}:`, error);
         }
     }
 
-    // If not found, try to match by querying each exemplar
-    // For now, just return first available
-    return Object.values(formState.config.exemplars)[0]?.id;
+    // If no match found, log error
+    console.error(`No exemplar found for Instance Of: ${instanceOfValue}`);
+    throw new Error(`No exemplar configured for this entity type (${instanceOfValue})`);
 }
 
 /**

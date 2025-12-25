@@ -13,10 +13,10 @@
       "description": "An excavation square (UPDATE WITH REAL Q NUMBER)"
     },
     "Human": {
-      "id": "Q_HUMAN_EXAMPLE",
-      "url": "https://timna-database.wikibase.cloud/wiki/Item:Q_HUMAN_EXAMPLE",
+      "id": "Q940",
+      "url": "https://timna-database.wikibase.cloud/wiki/Item:Q940",
       "label": "Human",
-      "description": "A person involved in the excavation (UPDATE WITH REAL Q NUMBER)"
+      "description": "A person involved in the excavation"
     }
   },
   "wikibase": {
