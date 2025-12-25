@@ -4,19 +4,25 @@
       "id": "Q507",
       "url": "https://timna-database.wikibase.cloud/wiki/Item:Q507",
       "label": "Archaeological Site",
-      "description": "A location where archaeological materials are found"
+      "description": "A place with any remains of ancient human activities"
     },
-    "Square": {
-      "id": "Q_SQUARE_EXAMPLE",
-      "url": "https://timna-database.wikibase.cloud/wiki/Item:Q_SQUARE_EXAMPLE",
-      "label": "Square",
-      "description": "An excavation square (UPDATE WITH REAL Q NUMBER)"
+    "Locus": {
+      "id": "Q1339",
+      "url": "https://timna-database.wikibase.cloud/wiki/Item:Q1339",
+      "label": "Locus",
+      "description": "A defined point or unit in three-dimensional space"
+    },
+    "Basket": {
+      "id": "Q856",
+      "url": "https://timna-database.wikibase.cloud/wiki/Item:Q856",
+      "label": "Basket",
+      "description": "Individual archaeological find or a group of finds"
     },
     "Human": {
       "id": "Q940",
       "url": "https://timna-database.wikibase.cloud/wiki/Item:Q940",
       "label": "Human",
-      "description": "A person involved in the excavation"
+      "description": "A human being"
     }
   },
   "wikibase": {
