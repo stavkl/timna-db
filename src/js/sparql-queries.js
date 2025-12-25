@@ -33,7 +33,8 @@ function buildExemplarPropertiesQuery(config, exemplarId) {
 }
 
 /**
- * Build query to get qualifiers for a specific property from exemplar
+ * Build query to get qualifiers mapped to property values from exemplar
+ * This discovers which qualifiers appear with which values
  */
 function buildPropertyQualifiersQuery(config, exemplarId, propertyId) {
     return `
@@ -43,11 +44,15 @@ function buildPropertyQualifiersQuery(config, exemplarId, propertyId) {
         PREFIX pq: <${config.wikibase.url}/prop/qualifier/>
         PREFIX wikibase: <http://wikiba.se/ontology#>
         PREFIX bd: <http://www.bigdata.com/rdf#>
+        PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
-        SELECT DISTINCT ?qualifier ?qualifierLabel ?qualifierDatatype
+        SELECT DISTINCT ?mainValue ?mainValueLabel ?qualifier ?qualifierLabel ?qualifierDatatype
         WHERE {
             # Get statements for this property
             wd:${exemplarId} p:${propertyId} ?statement .
+
+            # Get the main value of the statement
+            ?statement ps:${propertyId} ?mainValue .
 
             # Get qualifiers on those statements
             ?statement ?qualifierProp ?qualifierValue .
@@ -56,11 +61,14 @@ function buildPropertyQualifiersQuery(config, exemplarId, propertyId) {
             ?qualifier wikibase:qualifier ?qualifierProp .
             ?qualifier wikibase:propertyType ?qualifierDatatype .
 
+            # Get labels
+            OPTIONAL { ?mainValue rdfs:label ?mainValueLabel . FILTER(LANG(?mainValueLabel) = "en") }
+
             SERVICE wikibase:label {
                 bd:serviceParam wikibase:language "en" .
             }
         }
-        ORDER BY ?qualifierLabel
+        ORDER BY ?mainValueLabel ?qualifierLabel
     `;
 }
 
@@ -83,6 +91,41 @@ function buildPropertyValuesQuery(config, propertyId, instanceOfValue) {
 
             # Get values for this specific property
             ?item wdt:${propertyId} ?value .
+
+            # Ensure value is an item (not a literal)
+            FILTER(isIRI(?value))
+
+            SERVICE wikibase:label {
+                bd:serviceParam wikibase:language "en" .
+            }
+        }
+        ORDER BY ?valueLabel
+    `;
+}
+
+/**
+ * Build query to get all possible values for a WikibaseItem qualifier
+ * across all items of the same type
+ */
+function buildQualifierValuesQuery(config, qualifierId, instanceOfValue) {
+    return `
+        PREFIX wd: <${config.wikibase.url}/entity/>
+        PREFIX wdt: <${config.wikibase.url}/prop/direct/>
+        PREFIX p: <${config.wikibase.url}/prop/>
+        PREFIX pq: <${config.wikibase.url}/prop/qualifier/>
+        PREFIX wikibase: <http://wikiba.se/ontology#>
+        PREFIX bd: <http://www.bigdata.com/rdf#>
+
+        SELECT DISTINCT ?value ?valueLabel
+        WHERE {
+            # Get all items of this type
+            ?item wdt:${config.properties.instanceOf} wd:${instanceOfValue} .
+
+            # Get any statement from these items
+            ?item ?p ?statement .
+
+            # Get qualifier values
+            ?statement pq:${qualifierId} ?value .
 
             # Ensure value is an item (not a literal)
             FILTER(isIRI(?value))

@@ -265,18 +265,70 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
         // Check for qualifiers on this property
         console.log(`Checking for qualifiers on ${propertyId}...`);
         const qualifiersQuery = buildPropertyQualifiersQuery(formState.config, formState.exemplarId, propertyId);
-        const qualifiers = await executeSparqlQuery(
+        const qualifiersResults = await executeSparqlQuery(
             formState.config.wikibase.sparqlEndpoint,
             qualifiersQuery
         );
 
-        if (qualifiers.length > 0) {
-            console.log(`  Found ${qualifiers.length} qualifiers`);
-            field.qualifiers = qualifiers.map(q => ({
-                id: q.qualifier.value.split('/').pop(),
-                label: q.qualifierLabel.value,
-                datatype: q.qualifierDatatype.value.split('#').pop()
-            }));
+        if (qualifiersResults.length > 0) {
+            console.log(`  Found ${qualifiersResults.length} qualifier mappings`);
+
+            // Build qualifier map: mainValue -> qualifiers
+            const qualifierMap = {};
+            const allQualifiers = new Map(); // Track all unique qualifiers
+
+            for (const row of qualifiersResults) {
+                const mainValueId = row.mainValue.value.includes('/entity/')
+                    ? row.mainValue.value.split('/').pop()
+                    : row.mainValue.value; // Could be literal value
+
+                const qualifierId = row.qualifier.value.split('/').pop();
+                const qualifierDatatype = row.qualifierDatatype.value.split('#').pop();
+
+                // Track unique qualifiers
+                if (!allQualifiers.has(qualifierId)) {
+                    allQualifiers.set(qualifierId, {
+                        id: qualifierId,
+                        label: row.qualifierLabel.value,
+                        datatype: qualifierDatatype
+                    });
+                }
+
+                // Map qualifier to main value
+                if (!qualifierMap[mainValueId]) {
+                    qualifierMap[mainValueId] = new Set();
+                }
+                qualifierMap[mainValueId].add(qualifierId);
+            }
+
+            // For each qualifier, get possible values if it's WikibaseItem type
+            const qualifiersWithValues = [];
+            for (const [qualifierId, qualifierInfo] of allQualifiers) {
+                const enrichedQualifier = { ...qualifierInfo };
+
+                if (qualifierInfo.datatype === 'WikibaseItem') {
+                    console.log(`  Fetching values for qualifier ${qualifierId}...`);
+                    const valuesQuery = buildQualifierValuesQuery(formState.config, qualifierId, formState.instanceOfValue);
+                    const values = await executeSparqlQuery(
+                        formState.config.wikibase.sparqlEndpoint,
+                        valuesQuery
+                    );
+
+                    if (values.length > 0) {
+                        enrichedQualifier.values = values.map(v => ({
+                            id: v.value.value.split('/').pop(),
+                            label: v.valueLabel.value
+                        }));
+                        console.log(`    Found ${values.length} possible values`);
+                    }
+                }
+
+                qualifiersWithValues.push(enrichedQualifier);
+            }
+
+            // Attach qualifier mapping to field
+            field.qualifierMap = qualifierMap;
+            field.qualifiers = qualifiersWithValues;
         }
 
         schema.properties.push(field);

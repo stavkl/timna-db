@@ -51,9 +51,52 @@ function renderForm(currentData = null) {
 }
 
 /**
+ * Counter for unique field IDs
+ */
+let fieldCounter = 0;
+
+/**
  * Render a single field
  */
 function renderField(field, currentData) {
+    const requiredMark = field.required ? ' *' : '';
+    const propertyBadge = field.id.startsWith('P')
+        ? `<span class="property-badge">${field.id}</span>`
+        : '';
+
+    // Special handling for basic fields (label, description)
+    if (field.isSpecial) {
+        const currentValue = currentData ? (currentData[field.id] || '') : '';
+        const required = field.required ? 'required' : '';
+        let inputHTML = '';
+
+        if (field.type === 'textarea') {
+            inputHTML = `<textarea id="${field.id}" name="${field.id}" rows="3" ${required}>${currentValue}</textarea>`;
+        } else {
+            inputHTML = `<input type="text" id="${field.id}" name="${field.id}" ${required} value="${currentValue}">`;
+        }
+
+        return `
+            <div class="field">
+                <label for="${field.id}">${field.label}${requiredMark}</label>
+                ${inputHTML}
+            </div>
+        `;
+    }
+
+    // For properties with qualifiers, render as repeatable sections
+    if (field.qualifiers && field.qualifiers.length > 0) {
+        return renderRepeatableFieldWithQualifiers(field, currentData);
+    }
+
+    // For properties without qualifiers, use existing logic
+    return renderSimpleField(field, currentData);
+}
+
+/**
+ * Render a simple field without qualifiers
+ */
+function renderSimpleField(field, currentData) {
     const required = field.required ? 'required' : '';
     const requiredMark = field.required ? ' *' : '';
     const propertyBadge = field.id.startsWith('P')
@@ -65,16 +108,12 @@ function renderField(field, currentData) {
     let currentValues = [];
 
     if (currentData) {
-        if (field.isSpecial) {
-            currentValue = currentData[field.id] || '';
-        } else {
-            const propData = currentData.properties[field.id];
-            if (propData) {
-                if (field.type === 'multiselect') {
-                    currentValues = propData.map(v => v.id);
-                } else if (propData.length > 0) {
-                    currentValue = typeof propData[0] === 'object' ? propData[0].id : propData[0];
-                }
+        const propData = currentData.properties[field.id];
+        if (propData) {
+            if (field.type === 'multiselect') {
+                currentValues = propData.map(v => v.id);
+            } else if (propData.length > 0) {
+                currentValue = typeof propData[0] === 'object' ? propData[0].id : propData[0];
             }
         }
     }
@@ -148,55 +187,235 @@ function renderField(field, currentData) {
             inputHTML = `<input type="text" id="${field.id}" name="${field.id}" ${required} value="${currentValue || ''}">`;
     }
 
-    // Render qualifiers if present
-    let qualifiersHTML = '';
-    if (field.qualifiers && field.qualifiers.length > 0) {
-        qualifiersHTML = '<div class="qualifiers-section" style="margin-left: 1.5rem; margin-top: 1rem; padding-left: 1rem; border-left: 3px solid #e5e7eb;">';
-        qualifiersHTML += '<div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Qualifiers:</div>';
-
-        field.qualifiers.forEach(qualifier => {
-            const qualifierId = `${field.id}-qualifier-${qualifier.id}`;
-            const qualifierBadge = `<span class="property-badge" style="font-size: 0.75rem;">${qualifier.id}</span>`;
-
-            let qualifierInputHTML = '';
-            const qualifierInputType = mapDatatypeToInputType(qualifier.datatype);
-
-            switch (qualifierInputType) {
-                case 'text':
-                    qualifierInputHTML = `<input type="text" id="${qualifierId}" name="${qualifierId}" placeholder="${qualifier.label}" style="font-size: 0.875rem;">`;
-                    break;
-                case 'number':
-                    qualifierInputHTML = `<input type="number" id="${qualifierId}" name="${qualifierId}" step="any" placeholder="${qualifier.label}" style="font-size: 0.875rem;">`;
-                    break;
-                case 'url':
-                    qualifierInputHTML = `<input type="url" id="${qualifierId}" name="${qualifierId}" placeholder="${qualifier.label}" style="font-size: 0.875rem;">`;
-                    break;
-                case 'date':
-                    qualifierInputHTML = `<input type="date" id="${qualifierId}" name="${qualifierId}" style="font-size: 0.875rem;">`;
-                    break;
-                default:
-                    qualifierInputHTML = `<input type="text" id="${qualifierId}" name="${qualifierId}" placeholder="${qualifier.label}" style="font-size: 0.875rem;">`;
-            }
-
-            qualifiersHTML += `
-                <div class="field" style="margin-bottom: 0.75rem;">
-                    <label for="${qualifierId}" style="font-size: 0.875rem; font-weight: normal;">${qualifier.label} ${qualifierBadge}</label>
-                    ${qualifierInputHTML}
-                </div>
-            `;
-        });
-
-        qualifiersHTML += '</div>';
-    }
-
     return `
         <div class="field">
             <label for="${field.id}">${field.label}${requiredMark} ${propertyBadge}</label>
             ${inputHTML}
             ${field.description ? `<small>${field.description}</small>` : ''}
-            ${qualifiersHTML}
         </div>
     `;
+}
+
+/**
+ * Render a repeatable field with conditional qualifiers
+ */
+function renderRepeatableFieldWithQualifiers(field, currentData) {
+    const propertyBadge = `<span class="property-badge">${field.id}</span>`;
+    const containerId = `${field.id}-container`;
+
+    let html = `
+        <div class="field repeatable-field">
+            <label>${field.label} ${propertyBadge}</label>
+            ${field.description ? `<small>${field.description}</small>` : ''}
+            <div id="${containerId}" class="repeatable-values" style="margin-top: 0.5rem;">
+    `;
+
+    // TODO: Add existing values from currentData
+    // For now, show one empty value section
+    html += renderValueWithQualifiers(field, 0, null);
+
+    html += `
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addValueSection('${field.id}')" style="margin-top: 0.5rem;">
+                + Add Another ${field.label}
+            </button>
+        </div>
+    `;
+
+    return html;
+}
+
+/**
+ * Render a single value with its conditional qualifiers
+ */
+function renderValueWithQualifiers(field, index, valueData) {
+    const uniqueId = `${field.id}-${index}`;
+    const sectionId = `${uniqueId}-section`;
+
+    let html = `
+        <div id="${sectionId}" class="value-section" style="padding: 1rem; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 4px; background: #f9fafb;" data-field-id="${field.id}" data-index="${index}">
+    `;
+
+    // Render main value input
+    html += renderMainValueInput(field, uniqueId, valueData);
+
+    // Render qualifiers container (will be populated dynamically based on selected value)
+    html += `<div id="${uniqueId}-qualifiers" class="qualifiers-container" style="margin-top: 1rem;"></div>`;
+
+    // Remove button (only show if index > 0)
+    if (index > 0) {
+        html += `
+            <button type="button" class="btn btn-text btn-sm" onclick="removeValueSection('${sectionId}')" style="margin-top: 0.5rem; color: #dc2626;">
+                Remove
+            </button>
+        `;
+    }
+
+    html += `</div>`;
+
+    return html;
+}
+
+/**
+ * Render the main value input for a property
+ */
+function renderMainValueInput(field, uniqueId, valueData) {
+    const currentValue = valueData?.value || '';
+
+    let inputHTML = '';
+
+    if (field.type === 'multiselect' || (field.values && field.values.length > 0)) {
+        // Dropdown for WikibaseItem properties
+        const options = field.values.map(v => {
+            const selected = currentValue === v.id ? 'selected' : '';
+            return `<option value="${v.id}" ${selected}>${v.label} (${v.id})</option>`;
+        }).join('');
+
+        inputHTML = `
+            <select id="${uniqueId}-value" name="${uniqueId}-value" class="main-value-select" onchange="updateQualifiers('${field.id}', ${JSON.stringify(field).replace(/"/g, '&quot;')}, '${uniqueId}')" style="width: 100%;">
+                <option value="">-- Select --</option>
+                ${options}
+            </select>
+        `;
+    } else if (field.type === 'coordinates') {
+        const lat = valueData?.latitude || '';
+        const lon = valueData?.longitude || '';
+        inputHTML = `
+            <div class="field-group">
+                <input type="number" id="${uniqueId}-lat" step="0.000001" placeholder="Latitude" value="${lat}" onchange="updateQualifiers('${field.id}', ${JSON.stringify(field).replace(/"/g, '&quot;')}, '${uniqueId}')">
+                <input type="number" id="${uniqueId}-lon" step="0.000001" placeholder="Longitude" value="${lon}">
+            </div>
+        `;
+    } else {
+        // Text/number/date inputs
+        const inputType = field.type || 'text';
+        inputHTML = `<input type="${inputType}" id="${uniqueId}-value" name="${uniqueId}-value" value="${currentValue}" onchange="updateQualifiers('${field.id}', ${JSON.stringify(field).replace(/"/g, '&quot;')}, '${uniqueId}')" style="width: 100%;">`;
+    }
+
+    return `
+        <div class="field" style="margin-bottom: 0;">
+            <label for="${uniqueId}-value">Value</label>
+            ${inputHTML}
+        </div>
+    `;
+}
+
+/**
+ * Add a new value section for a repeatable field
+ */
+function addValueSection(fieldId) {
+    // Get field from schema
+    const field = formState.schema.properties.find(f => f.id === fieldId);
+    if (!field) return;
+
+    // Get container
+    const container = document.getElementById(`${fieldId}-container`);
+    if (!container) return;
+
+    // Find next index
+    const existingSections = container.querySelectorAll('.value-section');
+    const nextIndex = existingSections.length;
+
+    // Render new section
+    const newSection = renderValueWithQualifiers(field, nextIndex, null);
+
+    // Add to container
+    container.insertAdjacentHTML('beforeend', newSection);
+}
+
+/**
+ * Remove a value section
+ */
+function removeValueSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.remove();
+    }
+}
+
+/**
+ * Update qualifiers based on selected value
+ */
+function updateQualifiers(fieldId, fieldData, uniqueId) {
+    // Get the selected value
+    const valueElement = document.getElementById(`${uniqueId}-value`);
+    if (!valueElement) return;
+
+    const selectedValue = valueElement.value;
+    if (!selectedValue) {
+        // Clear qualifiers if no value selected
+        const qualifiersContainer = document.getElementById(`${uniqueId}-qualifiers`);
+        if (qualifiersContainer) {
+            qualifiersContainer.innerHTML = '';
+        }
+        return;
+    }
+
+    // Get field from schema (fieldData might be escaped HTML)
+    const field = formState.schema.properties.find(f => f.id === fieldId);
+    if (!field || !field.qualifierMap) return;
+
+    // Get qualifiers for this value
+    const qualifierIds = field.qualifierMap[selectedValue];
+    if (!qualifierIds || qualifierIds.size === 0) {
+        // No qualifiers for this value
+        const qualifiersContainer = document.getElementById(`${uniqueId}-qualifiers`);
+        if (qualifiersContainer) {
+            qualifiersContainer.innerHTML = '';
+        }
+        return;
+    }
+
+    // Build qualifiers HTML
+    let html = '<div style="padding-left: 1rem; border-left: 3px solid #e5e7eb; margin-top: 0.5rem;">';
+    html += '<div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">Qualifiers for this value:</div>';
+
+    for (const qualifierId of qualifierIds) {
+        const qualifier = field.qualifiers.find(q => q.id === qualifierId);
+        if (!qualifier) continue;
+
+        const qualifierFieldId = `${uniqueId}-qualifier-${qualifierId}`;
+        const qualifierBadge = `<span class="property-badge" style="font-size: 0.75rem;">${qualifierId}</span>`;
+
+        let qualifierInput = '';
+
+        // Render qualifier input based on type
+        if (qualifier.datatype === 'WikibaseItem' && qualifier.values && qualifier.values.length > 0) {
+            // Dropdown for WikibaseItem qualifiers
+            const options = qualifier.values.map(v =>
+                `<option value="${v.id}">${v.label} (${v.id})</option>`
+            ).join('');
+
+            qualifierInput = `
+                <select id="${qualifierFieldId}" name="${qualifierFieldId}" style="font-size: 0.875rem; width: 100%;">
+                    <option value="">-- Select --</option>
+                    ${options}
+                </select>
+            `;
+        } else {
+            // Text/number/date inputs
+            const inputType = qualifier.datatype === 'Quantity' ? 'number' :
+                            qualifier.datatype === 'Time' ? 'date' :
+                            qualifier.datatype === 'Url' ? 'url' : 'text';
+
+            qualifierInput = `<input type="${inputType}" id="${qualifierFieldId}" name="${qualifierFieldId}" placeholder="${qualifier.label}" style="font-size: 0.875rem; width: 100%;">`;
+        }
+
+        html += `
+            <div class="field" style="margin-bottom: 0.75rem;">
+                <label for="${qualifierFieldId}" style="font-size: 0.875rem; font-weight: normal;">${qualifier.label} ${qualifierBadge}</label>
+                ${qualifierInput}
+            </div>
+        `;
+    }
+
+    html += '</div>';
+
+    // Update qualifiers container
+    const qualifiersContainer = document.getElementById(`${uniqueId}-qualifiers`);
+    if (qualifiersContainer) {
+        qualifiersContainer.innerHTML = html;
+    }
 }
 
 /**
@@ -326,36 +545,40 @@ function collectFormData() {
     };
 
     formState.schema.properties.forEach(field => {
-        const element = document.getElementById(field.id);
-        if (!element) return;
+        // Check if this is a repeatable field with qualifiers
+        if (field.qualifiers && field.qualifiers.length > 0) {
+            // Collect multiple values with their qualifiers
+            const container = document.getElementById(`${field.id}-container`);
+            if (!container) return;
 
-        let value = null;
+            const valueSections = container.querySelectorAll('.value-section');
+            const valuesWithQualifiers = [];
 
-        if (field.type === 'multiselect') {
-            // Get selected options
-            const selected = Array.from(element.selectedOptions).map(opt => opt.value);
-            if (selected.length > 0) {
-                value = selected;
-            }
-        } else if (field.type === 'coordinates') {
-            const lat = document.getElementById(`${field.id}-lat`)?.value;
-            const lon = document.getElementById(`${field.id}-lon`)?.value;
-            if (lat && lon) {
-                value = { latitude: parseFloat(lat), longitude: parseFloat(lon) };
-            }
-        } else {
-            value = element.value;
-        }
+            valueSections.forEach(section => {
+                const index = section.getAttribute('data-index');
+                const uniqueId = `${field.id}-${index}`;
 
-        if (value) {
-            data.properties[field.id] = value;
+                // Get main value
+                let mainValue = null;
+                const valueElement = document.getElementById(`${uniqueId}-value`);
 
-            // Collect qualifiers for this property
-            if (field.qualifiers && field.qualifiers.length > 0) {
+                if (field.type === 'coordinates') {
+                    const lat = document.getElementById(`${uniqueId}-lat`)?.value;
+                    const lon = document.getElementById(`${uniqueId}-lon`)?.value;
+                    if (lat && lon) {
+                        mainValue = { latitude: parseFloat(lat), longitude: parseFloat(lon) };
+                    }
+                } else if (valueElement) {
+                    mainValue = valueElement.value;
+                }
+
+                if (!mainValue) return;
+
+                // Collect qualifiers for this value
                 const qualifiers = {};
                 field.qualifiers.forEach(qualifier => {
-                    const qualifierId = `${field.id}-qualifier-${qualifier.id}`;
-                    const qualifierElement = document.getElementById(qualifierId);
+                    const qualifierFieldId = `${uniqueId}-qualifier-${qualifier.id}`;
+                    const qualifierElement = document.getElementById(qualifierFieldId);
                     if (qualifierElement && qualifierElement.value) {
                         qualifiers[qualifier.id] = {
                             value: qualifierElement.value,
@@ -364,13 +587,41 @@ function collectFormData() {
                     }
                 });
 
-                if (Object.keys(qualifiers).length > 0) {
-                    // Store qualifiers with the property data
-                    data.properties[field.id] = {
-                        value: value,
-                        qualifiers: qualifiers
-                    };
+                // Add this value with its qualifiers
+                valuesWithQualifiers.push({
+                    value: mainValue,
+                    qualifiers: Object.keys(qualifiers).length > 0 ? qualifiers : null
+                });
+            });
+
+            if (valuesWithQualifiers.length > 0) {
+                data.properties[field.id] = valuesWithQualifiers;
+            }
+        } else {
+            // Simple field without qualifiers (original logic)
+            const element = document.getElementById(field.id);
+            if (!element) return;
+
+            let value = null;
+
+            if (field.type === 'multiselect') {
+                // Get selected options
+                const selected = Array.from(element.selectedOptions).map(opt => opt.value);
+                if (selected.length > 0) {
+                    value = selected;
                 }
+            } else if (field.type === 'coordinates') {
+                const lat = document.getElementById(`${field.id}-lat`)?.value;
+                const lon = document.getElementById(`${field.id}-lon`)?.value;
+                if (lat && lon) {
+                    value = { latitude: parseFloat(lat), longitude: parseFloat(lon) };
+                }
+            } else {
+                value = element.value;
+            }
+
+            if (value) {
+                data.properties[field.id] = value;
             }
         }
     });
@@ -417,18 +668,26 @@ function buildEntityData(formData) {
         const field = formState.schema.properties.find(f => f.id === propertyId);
         if (!field) continue;
 
-        // Check if propertyData has qualifiers or is just a value
-        let value, qualifiers;
-        if (propertyData && typeof propertyData === 'object' && propertyData.value !== undefined) {
-            value = propertyData.value;
-            qualifiers = propertyData.qualifiers;
+        let claims = [];
+
+        // Check if this is an array of values with qualifiers (new repeatable structure)
+        if (Array.isArray(propertyData) && propertyData.length > 0 && typeof propertyData[0] === 'object' && propertyData[0].value !== undefined) {
+            // Multiple values with qualifiers
+            for (const valueWithQualifiers of propertyData) {
+                const claim = buildClaimForProperty(propertyId, valueWithQualifiers.value, field.datatype, valueWithQualifiers.qualifiers);
+                if (claim && claim.length > 0) {
+                    claims.push(...claim);
+                }
+            }
         } else {
-            value = propertyData;
-            qualifiers = null;
+            // Old structure: simple value or array of values
+            const claim = buildClaimForProperty(propertyId, propertyData, field.datatype, null);
+            if (claim) {
+                claims = claim;
+            }
         }
 
-        const claims = buildClaimForProperty(propertyId, value, field.datatype, qualifiers);
-        if (claims) {
+        if (claims.length > 0) {
             entity.claims[propertyId] = claims;
         }
     }
