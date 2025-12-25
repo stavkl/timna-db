@@ -8,7 +8,8 @@ const API_BASE = window.location.origin + '/api';
 // Global auth state
 const authState = {
     sessionId: null,
-    isLoggedIn: false
+    isLoggedIn: false,
+    username: null
 };
 
 /**
@@ -17,10 +18,12 @@ const authState = {
 function initAuth() {
     // Check for existing session
     const sessionId = localStorage.getItem('sessionId');
+    const username = localStorage.getItem('username');
     if (sessionId) {
         authState.sessionId = sessionId;
+        authState.username = username;
         authState.isLoggedIn = true;
-        updateConnectionStatus(true);
+        updateConnectionStatus(true, username);
         return true;
     }
     return false;
@@ -45,10 +48,12 @@ async function login(username, password) {
 
         // Store session
         authState.sessionId = data.sessionId;
+        authState.username = username;
         authState.isLoggedIn = true;
         localStorage.setItem('sessionId', data.sessionId);
+        localStorage.setItem('username', username);
 
-        updateConnectionStatus(true);
+        updateConnectionStatus(true, username);
         return { success: true };
 
     } catch (error) {
@@ -61,8 +66,10 @@ async function login(username, password) {
  */
 function logout() {
     authState.sessionId = null;
+    authState.username = null;
     authState.isLoggedIn = false;
     localStorage.removeItem('sessionId');
+    localStorage.removeItem('username');
     localStorage.removeItem('formSchema');
     localStorage.removeItem('formSchemaTimestamp');
 
@@ -89,10 +96,13 @@ function isLoggedIn() {
 /**
  * Update connection status badge
  */
-function updateConnectionStatus(connected) {
+function updateConnectionStatus(connected, username = null) {
     const statusBadge = document.getElementById('connection-status');
     if (statusBadge) {
-        if (connected) {
+        if (connected && username) {
+            statusBadge.className = 'status-badge connected';
+            statusBadge.textContent = `Connected as ${username}`;
+        } else if (connected) {
             statusBadge.className = 'status-badge connected';
             statusBadge.textContent = 'Connected';
         } else {

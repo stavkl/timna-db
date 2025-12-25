@@ -34,6 +34,32 @@
 
                 <button type="submit" class="btn btn-primary">Login</button>
             </form>
+
+            <!-- Bot Creation Guide -->
+            <div class="info-box" style="margin-top: 2rem;">
+                <h3>How to Create a Bot Account</h3>
+                <p><strong>Why do I need a bot account?</strong></p>
+                <p>This form generator uses the Wikibase API to create and update items. Bot accounts have special permissions that allow automated editing while keeping your personal account separate.</p>
+
+                <p style="margin-top: 1rem;"><strong>Steps to create a bot:</strong></p>
+                <ol style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>Log in to your <a href="https://timna-database.wikibase.cloud" target="_blank">Wikibase instance</a></li>
+                    <li>Go to <strong>Special:BotPasswords</strong> (add <code>/wiki/Special:BotPasswords</code> to your Wikibase URL)</li>
+                    <li>Click "Create a new bot password"</li>
+                    <li>Enter a bot name (e.g., "FormBot")</li>
+                    <li>Check the following permissions:
+                        <ul style="margin-left: 1rem;">
+                            <li>✓ High-volume editing</li>
+                            <li>✓ Edit existing pages</li>
+                            <li>✓ Create, edit, and move pages</li>
+                        </ul>
+                    </li>
+                    <li>Click "Create"</li>
+                    <li>Save the generated username (YourName@BotName) and password securely</li>
+                </ol>
+
+                <p style="margin-top: 1rem;"><small>Note: You only need to create a bot account once. The credentials can be reused for all future sessions.</small></p>
+            </div>
         </div>
 
         <!-- Main Menu -->
