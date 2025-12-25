@@ -273,10 +273,13 @@ function renderMainValueInput(field, uniqueId, valueData) {
         }).join('');
 
         inputHTML = `
-            <select id="${uniqueId}-value" name="${uniqueId}-value" class="main-value-select" onchange="updateQualifiers('${field.id}', ${JSON.stringify(field).replace(/"/g, '&quot;')}, '${uniqueId}')" style="width: 100%;">
-                <option value="">-- Select --</option>
-                ${options}
-            </select>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <select id="${uniqueId}-value" name="${uniqueId}-value" class="main-value-select" onchange="updateQualifiers('${field.id}', ${JSON.stringify(field).replace(/"/g, '&quot;')}, '${uniqueId}')" style="flex: 1;">
+                    <option value="">-- Select --</option>
+                    ${options}
+                </select>
+                <button type="button" onclick="clearSelection('${uniqueId}-value', '${field.id}', '${uniqueId}')" class="btn btn-text" style="padding: 0.25rem 0.5rem; color: #dc2626;" title="Clear selection">×</button>
+            </div>
         `;
     } else if (field.type === 'coordinates') {
         const lat = valueData?.latitude || '';
@@ -416,6 +419,18 @@ function updateQualifiers(fieldId, fieldData, uniqueId) {
     const qualifiersContainer = document.getElementById(`${uniqueId}-qualifiers`);
     if (qualifiersContainer) {
         qualifiersContainer.innerHTML = html;
+    }
+}
+
+/**
+ * Clear selection from a dropdown
+ */
+function clearSelection(selectId, fieldId, uniqueId) {
+    const select = document.getElementById(selectId);
+    if (select) {
+        select.value = '';
+        // Trigger change event to update qualifiers
+        updateQualifiers(fieldId, null, uniqueId);
     }
 }
 
