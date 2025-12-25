@@ -139,38 +139,62 @@ function buildQualifierValuesQuery(config, qualifierId, instanceOfValue) {
 }
 
 /**
- * Build query to get item data for editing mode
+ * Build query to get item data with qualifiers for editing mode
  */
 function buildItemDataQuery(config, itemId) {
     return `
         PREFIX wd: <${config.wikibase.url}/entity/>
-        PREFIX wdt: <${config.wikibase.url}/prop/direct/>
+        PREFIX p: <${config.wikibase.url}/prop/>
+        PREFIX ps: <${config.wikibase.url}/prop/statement/>
+        PREFIX pq: <${config.wikibase.url}/prop/qualifier/>
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-        PREFIX schema: <http://schema.org/>
         PREFIX wikibase: <http://wikiba.se/ontology#>
         PREFIX bd: <http://www.bigdata.com/rdf#>
 
-        SELECT ?property ?propertyLabel ?value ?valueLabel ?datatype
+        SELECT ?property ?propertyLabel ?statement ?value ?valueLabel ?datatype
+               ?qualifier ?qualifierLabel ?qualifierValue ?qualifierValueLabel ?qualifierDatatype
         WHERE {
             # Get all statements from this item
-            wd:${itemId} ?propertyDirect ?value .
+            wd:${itemId} ?p ?statement .
 
-            # Get property details
-            ?property wikibase:directClaim ?propertyDirect .
+            # Get the property
+            ?property wikibase:claim ?p .
+            ?property wikibase:statementProperty ?ps .
             ?property wikibase:propertyType ?datatype .
 
-            # Get labels
+            # Get the main value
+            ?statement ?ps ?value .
+
+            # Get property labels
             OPTIONAL {
                 ?property rdfs:label ?propertyLabel .
                 FILTER(LANG(?propertyLabel) = "en")
             }
 
+            # Get value labels (for WikibaseItem values)
             OPTIONAL {
                 ?value rdfs:label ?valueLabel .
                 FILTER(LANG(?valueLabel) = "en")
             }
+
+            # Get qualifiers (optional)
+            OPTIONAL {
+                ?statement ?pq ?qualifierValue .
+                ?qualifier wikibase:qualifier ?pq .
+                ?qualifier wikibase:propertyType ?qualifierDatatype .
+
+                OPTIONAL {
+                    ?qualifier rdfs:label ?qualifierLabel .
+                    FILTER(LANG(?qualifierLabel) = "en")
+                }
+
+                OPTIONAL {
+                    ?qualifierValue rdfs:label ?qualifierValueLabel .
+                    FILTER(LANG(?qualifierValueLabel) = "en")
+                }
+            }
         }
-        ORDER BY ?propertyLabel
+        ORDER BY ?propertyLabel ?statement
     `;
 }
 

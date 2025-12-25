@@ -49,6 +49,11 @@ function renderForm(currentData = null) {
 
     // Attach event listeners for item inputs
     attachItemInputListeners();
+
+    // Initialize qualifiers for existing data in edit mode
+    if (currentData) {
+        initializeExistingQualifiers(currentData);
+    }
 }
 
 /**
@@ -211,9 +216,18 @@ function renderRepeatableFieldWithQualifiers(field, currentData) {
             <div id="${containerId}" class="repeatable-values" style="margin-top: 0.5rem;">
     `;
 
-    // TODO: Add existing values from currentData
-    // For now, show one empty value section
-    html += renderValueWithQualifiers(field, 0, null);
+    // Get existing values from currentData
+    const existingValues = currentData?.properties?.[field.id] || [];
+
+    if (existingValues.length > 0) {
+        // Render each existing value with its qualifiers
+        existingValues.forEach((valueData, index) => {
+            html += renderValueWithQualifiers(field, index, valueData);
+        });
+    } else {
+        // Show one empty value section if no existing data
+        html += renderValueWithQualifiers(field, 0, null);
+    }
 
     html += `
             </div>
@@ -267,8 +281,11 @@ function renderMainValueInput(field, uniqueId, valueData) {
 
     if (field.type === 'multiselect' || (field.values && field.values.length > 0)) {
         // Dropdown for WikibaseItem properties
+        // Extract ID from value (could be string ID or {id, label} object)
+        const currentValueId = typeof currentValue === 'object' ? currentValue.id : currentValue;
+
         const options = field.values.map(v => {
-            const selected = currentValue === v.id ? 'selected' : '';
+            const selected = currentValueId === v.id ? 'selected' : '';
             return `<option value="${v.id}" ${selected}>${v.label} (${v.id})</option>`;
         }).join('');
 
@@ -340,7 +357,7 @@ function removeValueSection(sectionId) {
 /**
  * Update qualifiers based on selected value
  */
-function updateQualifiers(fieldId, fieldData, uniqueId) {
+function updateQualifiers(fieldId, fieldData, uniqueId, existingQualifiers = null) {
     // Get the selected value
     const valueElement = document.getElementById(`${uniqueId}-value`);
     if (!valueElement) return;
@@ -381,14 +398,19 @@ function updateQualifiers(fieldId, fieldData, uniqueId) {
         const qualifierFieldId = `${uniqueId}-qualifier-${qualifierId}`;
         const qualifierBadge = `<span class="property-badge" style="font-size: 0.75rem;">${qualifierId}</span>`;
 
+        // Get existing value for this qualifier if available
+        const existingValue = existingQualifiers?.[qualifierId]?.value || '';
+        const existingValueId = typeof existingValue === 'object' ? existingValue.id : existingValue;
+
         let qualifierInput = '';
 
         // Render qualifier input based on type
         if (qualifier.datatype === 'WikibaseItem' && qualifier.values && qualifier.values.length > 0) {
             // Dropdown for WikibaseItem qualifiers
-            const options = qualifier.values.map(v =>
-                `<option value="${v.id}">${v.label} (${v.id})</option>`
-            ).join('');
+            const options = qualifier.values.map(v => {
+                const selected = existingValueId === v.id ? 'selected' : '';
+                return `<option value="${v.id}" ${selected}>${v.label} (${v.id})</option>`;
+            }).join('');
 
             qualifierInput = `
                 <select id="${qualifierFieldId}" name="${qualifierFieldId}" style="font-size: 0.875rem; width: 100%;">
@@ -402,7 +424,7 @@ function updateQualifiers(fieldId, fieldData, uniqueId) {
                             qualifier.datatype === 'Time' ? 'date' :
                             qualifier.datatype === 'Url' ? 'url' : 'text';
 
-            qualifierInput = `<input type="${inputType}" id="${qualifierFieldId}" name="${qualifierFieldId}" placeholder="${qualifier.label}" style="font-size: 0.875rem; width: 100%;">`;
+            qualifierInput = `<input type="${inputType}" id="${qualifierFieldId}" name="${qualifierFieldId}" placeholder="${qualifier.label}" value="${existingValueId}" style="font-size: 0.875rem; width: 100%;">`;
         }
 
         html += `
@@ -419,6 +441,31 @@ function updateQualifiers(fieldId, fieldData, uniqueId) {
     const qualifiersContainer = document.getElementById(`${uniqueId}-qualifiers`);
     if (qualifiersContainer) {
         qualifiersContainer.innerHTML = html;
+    }
+}
+
+/**
+ * Initialize qualifiers for existing data after form is rendered
+ */
+function initializeExistingQualifiers(currentData) {
+    if (!currentData || !currentData.properties) return;
+
+    // For each property that has values with qualifiers
+    for (const [propertyId, values] of Object.entries(currentData.properties)) {
+        // Find the field in schema
+        const field = formState.schema.properties.find(f => f.id === propertyId);
+        if (!field || !field.qualifiers || field.qualifiers.length === 0) continue;
+
+        // For each value, trigger qualifier update with existing qualifier data
+        values.forEach((valueData, index) => {
+            const uniqueId = `${propertyId}-${index}`;
+            const valueElement = document.getElementById(`${uniqueId}-value`);
+
+            // Only initialize if the element exists and has a value
+            if (valueElement && valueElement.value) {
+                updateQualifiers(propertyId, field, uniqueId, valueData.qualifiers);
+            }
+        });
     }
 }
 

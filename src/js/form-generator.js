@@ -338,7 +338,7 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
 }
 
 /**
- * Process item data from SPARQL results
+ * Process item data from SPARQL results with qualifiers
  */
 function processItemData(itemData, labelDescResults) {
     const processed = {
@@ -353,29 +353,67 @@ function processItemData(itemData, labelDescResults) {
         processed.description = labelDescResults[0].description?.value || '';
     }
 
-    // Group property values
+    // Group statements by property and statement URI
+    const statementMap = new Map();
+
     itemData.forEach(row => {
         const propertyId = row.property.value.split('/').pop();
+        const statementUri = row.statement.value;
         const datatype = row.datatype.value.split('#').pop();
 
-        if (!processed.properties[propertyId]) {
-            processed.properties[propertyId] = [];
+        // Create statement entry if doesn't exist
+        if (!statementMap.has(statementUri)) {
+            let mainValue;
+            if (datatype === 'WikibaseItem') {
+                mainValue = {
+                    id: row.value.value.split('/').pop(),
+                    label: row.valueLabel?.value
+                };
+            } else {
+                mainValue = row.value.value;
+            }
+
+            statementMap.set(statementUri, {
+                propertyId,
+                value: mainValue,
+                qualifiers: {}
+            });
         }
 
-        let value;
-        if (datatype === 'WikibaseItem') {
-            // Item reference
-            value = {
-                id: row.value.value.split('/').pop(),
-                label: row.valueLabel?.value
+        // Add qualifier if present
+        if (row.qualifier) {
+            const qualifierId = row.qualifier.value.split('/').pop();
+            const qualifierDatatype = row.qualifierDatatype.value.split('#').pop();
+            const statement = statementMap.get(statementUri);
+
+            let qualifierValue;
+            if (qualifierDatatype === 'WikibaseItem') {
+                qualifierValue = {
+                    id: row.qualifierValue.value.split('/').pop(),
+                    label: row.qualifierValueLabel?.value
+                };
+            } else {
+                qualifierValue = row.qualifierValue.value;
+            }
+
+            statement.qualifiers[qualifierId] = {
+                value: qualifierValue,
+                datatype: qualifierDatatype
             };
-        } else {
-            // Literal value
-            value = row.value.value;
+        }
+    });
+
+    // Group statements by property
+    for (const statement of statementMap.values()) {
+        if (!processed.properties[statement.propertyId]) {
+            processed.properties[statement.propertyId] = [];
         }
 
-        processed.properties[propertyId].push(value);
-    });
+        processed.properties[statement.propertyId].push({
+            value: statement.value,
+            qualifiers: Object.keys(statement.qualifiers).length > 0 ? statement.qualifiers : null
+        });
+    }
 
     return processed;
 }
