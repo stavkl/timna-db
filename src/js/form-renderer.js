@@ -42,6 +42,7 @@ function renderForm(currentData = null) {
         html += '<button type="submit" class="btn btn-primary">Update Item</button>';
     }
     html += '<a href="/src/index.html" class="btn btn-secondary">Cancel</a>';
+    html += '<a href="https://github.com/stavkl/timna-db/issues/new" target="_blank" class="btn btn-secondary">Report an Issue</a>';
     html += '</div>';
 
     container.innerHTML = html;
@@ -914,6 +915,7 @@ function showSuccessMessage(result) {
                 ${formState.mode === 'create' ?
                     `<button onclick="location.reload()" class="btn btn-secondary">Create Another</button>` :
                     ''}
+                <a href="https://github.com/stavkl/timna-db/issues/new" target="_blank" class="btn btn-secondary">Report an Issue</a>
             </div>
         </div>
     `;
