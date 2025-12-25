@@ -278,6 +278,13 @@ app.get('/api/health', (req, res) => {
 });
 
 /**
+ * Root redirect to main menu
+ */
+app.get('/', (req, res) => {
+    res.redirect('/src/index.html');
+});
+
+/**
  * Debug route to check what's happening
  */
 app.get('/debug', (req, res) => {
