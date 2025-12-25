@@ -269,7 +269,26 @@ app.post('/api/set-label', async (req, res) => {
  * Health check endpoint
  */
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', wikibaseUrl: WIKIBASE_URL });
+    res.json({
+        status: 'ok',
+        wikibaseUrl: WIKIBASE_URL,
+        dirname: __dirname,
+        env: process.env.VERCEL ? 'vercel' : 'local'
+    });
+});
+
+/**
+ * Debug route to check what's happening
+ */
+app.get('/debug', (req, res) => {
+    const fs = require('fs');
+    const files = fs.readdirSync(__dirname);
+    res.json({
+        dirname: __dirname,
+        files: files,
+        srcExists: fs.existsSync(path.join(__dirname, 'src')),
+        indexExists: fs.existsSync(path.join(__dirname, 'src', 'index.html'))
+    });
 });
 
 /**
