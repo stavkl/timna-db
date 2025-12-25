@@ -344,6 +344,107 @@ function generateSessionId() {
 }
 
 /**
+ * Create new entity endpoint
+ */
+app.post('/api/create-entity', async (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    const { entity } = req.body;
+
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    if (!entity) {
+        return res.status(400).json({ error: 'Entity data required' });
+    }
+
+    const session = sessions.get(sessionId);
+
+    try {
+        // Create the entity via Wikibase API
+        const params = new URLSearchParams({
+            action: 'wbeditentity',
+            new: 'item',
+            data: JSON.stringify(entity),
+            token: session.csrfToken,
+            format: 'json'
+        });
+
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cookie': session.cookies
+            },
+            body: params
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            return res.status(400).json({ error: data.error.info || 'Failed to create entity' });
+        }
+
+        res.json(data);
+
+    } catch (error) {
+        console.error('Create entity error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * Update existing entity endpoint
+ */
+app.post('/api/update-entity/:id', async (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    const { entity } = req.body;
+    const itemId = req.params.id;
+
+    if (!sessionId || !sessions.has(sessionId)) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    if (!entity) {
+        return res.status(400).json({ error: 'Entity data required' });
+    }
+
+    const session = sessions.get(sessionId);
+
+    try {
+        // Update the entity via Wikibase API
+        const params = new URLSearchParams({
+            action: 'wbeditentity',
+            id: itemId,
+            data: JSON.stringify(entity),
+            token: session.csrfToken,
+            format: 'json'
+        });
+
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cookie': session.cookies
+            },
+            body: params
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            return res.status(400).json({ error: data.error.info || 'Failed to update entity' });
+        }
+
+        res.json(data);
+
+    } catch (error) {
+        console.error('Update entity error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * Helper: Clean up old sessions
  */
 function cleanupSessions() {
@@ -355,12 +456,13 @@ function cleanupSessions() {
     }
 }
 
+// Clean up sessions every hour
+setInterval(cleanupSessions, 60 * 60 * 1000);
+
 // Start server
 app.listen(PORT, () => {
     console.log(`\n🚀 Wikibase Proxy Server running on http://localhost:${PORT}`);
     console.log(`📊 Connected to: ${WIKIBASE_URL}`);
-    console.log(`\n📝 Available Forms:`);
-    console.log(`   • Dynamic Form (recommended): http://localhost:${PORT}/dynamic-form.html`);
-    console.log(`   • Static Site Form: http://localhost:${PORT}/site-form.html`);
-    console.log(`   • Simple Form: http://localhost:${PORT}/simple-form.html\n`);
+    console.log(`\n📝 Form Generator:`);
+    console.log(`   • Main Menu: http://localhost:${PORT}/src/index.html\n`);
 });

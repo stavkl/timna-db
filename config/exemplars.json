@@ -1,0 +1,30 @@
+{
+  "exemplars": {
+    "Archaeological_Site": {
+      "id": "Q507",
+      "url": "https://timna-database.wikibase.cloud/wiki/Item:Q507",
+      "label": "Archaeological Site",
+      "description": "A location where archaeological materials are found"
+    },
+    "Square": {
+      "id": "Q_SQUARE_EXAMPLE",
+      "url": "https://timna-database.wikibase.cloud/wiki/Item:Q_SQUARE_EXAMPLE",
+      "label": "Square",
+      "description": "An excavation square (UPDATE WITH REAL Q NUMBER)"
+    },
+    "Human": {
+      "id": "Q_HUMAN_EXAMPLE",
+      "url": "https://timna-database.wikibase.cloud/wiki/Item:Q_HUMAN_EXAMPLE",
+      "label": "Human",
+      "description": "A person involved in the excavation (UPDATE WITH REAL Q NUMBER)"
+    }
+  },
+  "wikibase": {
+    "url": "https://timna-database.wikibase.cloud",
+    "sparqlEndpoint": "https://timna-database.wikibase.cloud/query/sparql",
+    "apiEndpoint": "https://timna-database.wikibase.cloud/w/api.php"
+  },
+  "properties": {
+    "instanceOf": "P110"
+  }
+}

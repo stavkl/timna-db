@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form - Timna Database</title>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Form</h1>
+            <div id="connection-status" class="status-badge disconnected">Not Connected</div>
+            <button id="logout-btn" class="btn btn-text" style="position: absolute; top: 0; right: 0;">Logout</button>
+        </header>
+
+        <form id="main-form">
+            <div id="form-container">
+                <!-- Form will be generated here -->
+                <div class="field-loader">
+                    <div class="spinner spinner-large"></div>
+                    <p>Loading form...</p>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Load scripts in correct order -->
+    <script src="../js/auth.js"></script>
+    <script src="../js/sparql-queries.js"></script>
+    <script src="../js/form-renderer.js"></script>
+    <script src="../js/form-generator.js"></script>
+</body>
+</html>

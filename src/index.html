@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timna Database - Form Generator</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Timna Database</h1>
+            <p class="subtitle">Data Entry Form Generator</p>
+            <div id="connection-status" class="status-badge disconnected">Not Connected</div>
+        </header>
+
+        <!-- Login Panel -->
+        <div id="login-panel" class="panel">
+            <h2>Login</h2>
+            <p>Please log in with your bot credentials to continue.</p>
+
+            <form id="login-form">
+                <div class="field">
+                    <label for="bot-username">Bot Username</label>
+                    <input type="text" id="bot-username" required placeholder="BotName@BotName">
+                    <small>Format: YourBotName@YourBotName</small>
+                </div>
+
+                <div class="field">
+                    <label for="bot-password">Bot Password</label>
+                    <input type="password" id="bot-password" required>
+                    <small>Use the password generated when you created the bot</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+        </div>
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="panel" style="display: none;">
+            <h2>Select Action</h2>
+
+            <div class="action-grid">
+                <!-- Create New Item -->
+                <div class="action-card">
+                    <h3>Create New Item</h3>
+                    <p>Start fresh with a new entry</p>
+                    <div class="entity-types">
+                        <button class="btn btn-primary" data-action="create" data-type="Archaeological_Site">
+                            New Archaeological Site
+                        </button>
+                        <button class="btn btn-primary" data-action="create" data-type="Square">
+                            New Square
+                        </button>
+                        <button class="btn btn-primary" data-action="create" data-type="Human">
+                            New Human
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Edit Existing Item -->
+                <div class="action-card">
+                    <h3>Edit Existing Item</h3>
+                    <p>Update or add to an existing entry</p>
+
+                    <div class="field">
+                        <label for="item-search">Item ID or URL</label>
+                        <input type="text" id="item-search" placeholder="Q507 or full URL">
+                        <small>Enter the Q number (e.g., Q507) or paste the full URL</small>
+                    </div>
+
+                    <button class="btn btn-secondary" id="load-item-btn">
+                        Load Item for Editing
+                    </button>
+
+                    <div id="item-preview" style="display: none; margin-top: 1rem;">
+                        <div class="info-box">
+                            <strong>Item Found:</strong>
+                            <p id="item-preview-label"></p>
+                            <p id="item-preview-type"></p>
+                            <button class="btn btn-primary" id="edit-item-btn">
+                                Edit This Item
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="logout-btn" class="btn btn-text" style="margin-top: 2rem;">Logout</button>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script src="js/menu.js"></script>
+</body>
+</html>

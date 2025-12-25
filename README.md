@@ -1,177 +1,341 @@
-# Wikibase Ontology Editor
+# Timna Database - Form Generator
 
-A web-based tool for viewing and editing Wikibase ontologies in a simple, intuitive interface. Built specifically for teams working with Wikibase Cloud instances who need a more user-friendly way to manage their knowledge graph structure.
+A dynamic form generation system for Wikibase that creates data entry forms based on exemplar items. This system automatically discovers properties and their values from your Wikibase ontology and generates appropriate form fields.
 
-## Features
+## Overview
 
-- **Tree View**: Visual hierarchy of classes and their relationships
-- **Property Management**: View and edit all properties in your ontology
-- **Search & Filter**: Quickly find classes and properties
-- **Entity Editor**: Edit labels, descriptions, aliases, and statements
-- **Create New Items**: Add new classes and properties through simple forms
-- **Bot Authentication**: Secure connection using Wikibase bot credentials
+This application generates forms for creating and editing Wikibase items based on an **exemplar-driven pipeline**:
 
-## Live Demo
+1. **Exemplar Item** - A permanent reference item (e.g., Site Q507) that defines the structure
+2. **Property Discovery** - Automatically extracts all properties from the exemplar
+3. **Value Discovery** - For item-type properties, queries all items of the same type to find existing values
+4. **Form Generation** - Creates a form with appropriate inputs and multi-select dropdowns
 
-Once deployed to GitHub Pages, your app will be available at:
-`https://[your-username].github.io/wikibase-ontology-editor/`
+## Key Features
 
-## Setup
+### Create Mode
+- Start with empty form based on exemplar structure
+- Multi-select dropdowns populated with existing values from similar items
+- Ability to add custom Q numbers for properties
+
+### Edit Mode
+- Load existing item data
+- Pre-select current values in dropdowns
+- **Append mode** for multi-value properties (add new baskets without deleting existing ones)
+- **Replace mode** for single-value properties
+
+### Smart Property Handling
+- **WikibaseItem properties** → Multi-select dropdowns with all existing values
+- **String/Text properties** → Text inputs (unique values)
+- **Number properties** → Number inputs
+- **Date properties** → Date pickers
+- **Coordinate properties** → Lat/Lon inputs
+- **URL properties** → URL inputs
+
+## Project Structure
+
+```
+timna-db/
+├── config/
+│   └── exemplars.json          # Configuration for exemplar items
+├── src/
+│   ├── index.html              # Main menu page
+│   ├── forms/
+│   │   └── form.html           # Form generator page
+│   ├── js/
+│   │   ├── auth.js             # Authentication handling
+│   │   ├── menu.js             # Main menu logic
+│   │   ├── form-generator.js   # Form generation pipeline
+│   │   ├── form-renderer.js    # Form rendering & submission
+│   │   └── sparql-queries.js   # SPARQL query builders
+│   └── css/
+│       └── styles.css          # Shared styles
+├── server.js                   # Express proxy server
+├── package.json                # Dependencies
+└── README.md                   # This file
+```
+
+## Installation
 
 ### Prerequisites
+- Node.js v14+ (tested on v14.16.0)
+- Bot credentials from your Wikibase instance
 
-1. A Wikibase Cloud instance (e.g., `https://timna-database.wikibase.cloud`)
-2. Bot credentials for your Wikibase instance
+### Setup
 
-### Creating Bot Credentials
-
-1. Log in to your Wikibase instance
-2. Go to `Special:BotPasswords` (e.g., `https://timna-database.wikibase.cloud/wiki/Special:BotPasswords`)
-3. Create a new bot password with the following grants:
-   - High-volume editing
-   - Edit existing pages
-   - Create, edit, and move pages
-4. Save the bot username and password securely
-
-### Local Development
-
-1. Clone this repository:
+1. **Clone the repository**
    ```bash
-   git clone https://github.com/[your-username]/wikibase-ontology-editor.git
-   cd wikibase-ontology-editor
+   git clone https://github.com/stavkl/timna-db.git
+   cd timna-db
    ```
 
-2. Serve the files locally using any HTTP server. For example:
+2. **Install dependencies**
    ```bash
-   # Using Python 3
-   python -m http.server 8000
-
-   # Using Node.js http-server
-   npx http-server
-
-   # Using PHP
-   php -S localhost:8000
+   npm install
    ```
 
-3. Open your browser to `http://localhost:8000`
+3. **Configure environment**
 
-4. Enter your Wikibase URL and bot credentials to connect
-
-### Deploying to GitHub Pages
-
-1. Create a new repository on GitHub named `wikibase-ontology-editor`
-
-2. Push your code:
+   Copy `.env.example` to `.env`:
    ```bash
-   git remote add origin https://github.com/[your-username]/wikibase-ontology-editor.git
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git push -u origin main
+   cp .env.example .env
    ```
 
-3. Enable GitHub Pages:
-   - Go to repository Settings → Pages
-   - Under "Source", select "main" branch
-   - Click Save
+   Edit `.env` and set your Wikibase URL:
+   ```
+   WIKIBASE_URL=https://your-instance.wikibase.cloud
+   ```
 
-4. Your app will be live at `https://[your-username].github.io/wikibase-ontology-editor/`
+4. **Configure exemplars**
+
+   Edit `config/exemplars.json` and update the exemplar items for your entity types:
+   ```json
+   {
+     "exemplars": {
+       "Archaeological_Site": {
+         "id": "Q507",
+         "url": "https://timna-database.wikibase.cloud/wiki/Item:Q507",
+         "label": "Archaeological Site",
+         "description": "A location where archaeological materials are found"
+       }
+     }
+   }
+   ```
+
+5. **Start the server**
+   ```bash
+   npm start
+   ```
+
+6. **Open the application**
+
+   Navigate to: `http://localhost:3000/src/index.html`
 
 ## Usage
 
-### Connecting to Your Wikibase
+### Creating a New Item
 
-1. Open the app
-2. Enter your Wikibase URL (e.g., `https://timna-database.wikibase.cloud`)
-3. Enter your bot username (format: `YourUsername@YourBotName`)
-4. Enter your bot password
-5. Click "Connect"
+1. Open the main menu at `http://localhost:3000/src/index.html`
+2. Login with your bot credentials (format: `BotName@BotName`)
+3. Click on the appropriate "New [Entity Type]" button
+4. Fill out the form:
+   - **Name**: Enter a unique name (required)
+   - **Description**: Brief description
+   - **Properties**: For multi-select fields, hold Ctrl (Cmd on Mac) to select multiple values
+5. Click "Create Item"
+6. You'll receive a link to view the created item in Wikibase
 
-### Viewing the Ontology
+### Editing an Existing Item
 
-- **Classes Tab**: Shows hierarchical tree of all classes
-- **Properties Tab**: Shows flat list of all properties
-- Click the `▶` arrow to expand/collapse class hierarchies
-- Use the search box to filter items
+1. Open the main menu
+2. Login with bot credentials
+3. In the "Edit Existing Item" section:
+   - Enter the item's Q number (e.g., `Q507`)
+   - Or paste the full URL (e.g., `https://timna-database.wikibase.cloud/wiki/Item:Q507`)
+4. Click "Load Item for Editing"
+5. Review the item preview
+6. Click "Edit This Item"
+7. Modify the form:
+   - Existing values in multi-select dropdowns will be pre-selected
+   - Select/deselect values as needed
+   - Add new custom Q numbers if necessary
+8. Click "Update Item"
 
-### Editing Entities
+### Adding Custom Values
 
-1. Click on any class or property in the tree
-2. Edit the label, description, or aliases
-3. Click "Save Changes" to update
-4. Click "Cancel" to discard changes
+For properties with dropdown menus:
+1. Select from existing values, OR
+2. Click "Add New Value (Q number)"
+3. Enter a Q number (e.g., `Q123`)
+4. The value will be added to your selection
 
-### Creating New Items
+## The Exemplar Pipeline
 
-1. Click "+ New Class" or "+ New Property"
-2. Fill in the label and description
-3. For classes: optionally select a parent class
-4. For properties: select the datatype
-5. Click "Create"
+### How It Works
+
+```
+1. User selects "Create Archaeological Site"
+   ↓
+2. System loads exemplar Q507 (configured in exemplars.json)
+   ↓
+3. SPARQL query extracts Instance Of value → Q17 (Archaeological Site)
+   ↓
+4. SPARQL query finds all properties used in Q507
+   ↓
+5. For each WikibaseItem property (e.g., P193 Artifact Type):
+      - Query all Q17 items for their P193 values
+      - Build dropdown with discovered values
+   ↓
+6. Render form with appropriate input types
+   ↓
+7. User fills form and submits
+   ↓
+8. System creates new item with Instance Of = Q17
+```
+
+### Benefits
+
+- **Self-updating**: Form automatically reflects ontology changes
+- **No hardcoding**: Properties discovered dynamically from exemplars
+- **Consistent data**: Dropdowns ensure values match existing items
+- **Flexible**: Supports any entity type with proper exemplar configuration
 
 ## Configuration
 
-### SPARQL Query Customization
+### Exemplar Requirements
 
-The app uses SPARQL queries to fetch ontology structure. You may need to adjust the property IDs based on your Wikibase setup:
+An exemplar item must:
+1. Have an `Instance Of` property (P110) defining its type
+2. Include all properties that should appear in the form
+3. Be permanently available (managed by code maintainer)
 
-In [wikibase-api.js](wikibase-api.js), update the property IDs:
-- `P279`: "subclass of" property (used to build class hierarchy)
+### Adding New Entity Types
 
-### Language Settings
+1. Create an exemplar item in Wikibase (e.g., "Square Q500")
+2. Add all relevant properties to this item
+3. Update `config/exemplars.json`:
+   ```json
+   "Square": {
+     "id": "Q500",
+     "url": "https://your-wikibase.cloud/wiki/Item:Q500",
+     "label": "Square",
+     "description": "An excavation square"
+   }
+   ```
+4. Restart the server
+5. The "New Square" button will appear in the main menu
 
-By default, the app uses English (`en`) for labels and descriptions. To change this, edit the `lang` parameters in [app.js](app.js).
+## API Endpoints
 
-## Security Notes
+### Authentication
+- `POST /api/login` - Login with bot credentials
+  - Body: `{ username, password }`
+  - Returns: `{ success, sessionId }`
 
-- **Never commit your bot credentials** to the repository
-- Credentials are only stored in the browser session and are not persisted
-- The app runs entirely client-side in your browser
-- All API requests are made directly from your browser to your Wikibase instance
+### Entity Operations
+- `POST /api/create-entity` - Create new item
+  - Headers: `X-Session-ID`
+  - Body: `{ entity }` (Wikibase entity structure)
+  - Returns: Created entity with ID
 
-## Browser Compatibility
+- `POST /api/update-entity/:id` - Update existing item
+  - Headers: `X-Session-ID`
+  - Body: `{ entity }`
+  - Returns: Updated entity
 
-- Chrome/Edge (recommended)
-- Firefox
-- Safari
+### Legacy (still available)
+- `POST /api/create-site` - Old endpoint for site creation
+- `POST /api/logout` - Logout
 
-Requires a modern browser with ES6+ support.
+## Architecture
 
-## Troubleshooting
+### Frontend Flow
 
-### CORS Errors
+```
+index.html (Main Menu)
+    ↓
+menu.js (handles entity type selection)
+    ↓
+form.html (Form page)
+    ↓
+form-generator.js (builds form from exemplar)
+    ↓
+sparql-queries.js (fetches data from Wikibase)
+    ↓
+form-renderer.js (renders and handles submission)
+```
 
-If you encounter CORS errors, ensure your Wikibase Cloud instance has CORS enabled. Wikibase Cloud instances typically have this enabled by default.
+### Backend Flow
 
-### Authentication Fails
+```
+Express Server (server.js)
+    ↓
+Session Management (in-memory)
+    ↓
+MediaWiki API Authentication
+    ↓
+Wikibase Entity Creation/Update
+```
 
-- Verify your bot credentials are correct
-- Check that your bot has the necessary permissions
-- Ensure your Wikibase instance URL is correct (no trailing slash)
+## Development
 
-### Ontology Not Loading
+### Running in Development
 
-- Check browser console for errors
-- Verify your SPARQL endpoint is accessible
-- Ensure property IDs (like P279 for "subclass of") match your Wikibase setup
+```bash
+npm start
+```
 
-## Future Enhancements
+The server will run on `http://localhost:3000` with auto-reload (if using nodemon).
 
-- [ ] Bulk import/export
-- [ ] Visual graph view
-- [ ] Statement editing
-- [ ] Multi-language support
-- [ ] Undo/redo functionality
-- [ ] Collaborative editing indicators
+### Debugging
+
+1. Open browser DevTools (F12)
+2. Check Console tab for:
+   - SPARQL query results
+   - Property discovery logs
+   - Value matching logs
+3. Check Network tab for API request/response details
+
+### Common Issues
+
+**"Properties found: 0"**
+- Check that exemplar ID is correct in config
+- Verify exemplar item exists in Wikibase
+- Check SPARQL endpoint is accessible
+
+**"No values found for property"**
+- No items of this type have values for this property yet
+- This is normal for new properties
+- Users can still add custom Q numbers
+
+**"Login failed"**
+- Verify bot credentials are correct
+- Check bot has appropriate permissions
+- Ensure cookies are enabled
+
+## Deployment
+
+### Vercel (Serverless)
+
+A `vercel.json` configuration is included:
+
+```bash
+npm install -g vercel
+vercel
+```
+
+### Traditional Hosting
+
+1. Install dependencies: `npm install`
+2. Set environment variables (PORT, WIKIBASE_URL)
+3. Start server: `npm start`
+4. Use a process manager like PM2 for production:
+   ```bash
+   npm install -g pm2
+   pm2 start server.js --name timna-db
+   ```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit issues or pull requests.
+This project follows an exemplar-driven architecture. When adding features:
+
+1. Ensure backward compatibility with existing exemplars
+2. Test with multiple entity types
+3. Update documentation
+4. Commit with descriptive messages
 
 ## License
 
-MIT License - feel free to use and modify for your needs.
+[Add your license here]
 
-## Acknowledgments
+## Support
 
-Built for teams working with Wikibase Cloud to make ontology management more accessible.
+For issues or questions:
+- Check the documentation in `/docs`
+- Review SPARQL queries in browser DevTools
+- Check server logs for errors
+
+---
+
+**Last Updated**: 2024-12-24
+**Version**: 2.0.0 (Exemplar-driven architecture)

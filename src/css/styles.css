@@ -1,4 +1,4 @@
-/* Archaeological Site Form Styles */
+/* Timna Database - Shared Styles */
 
 :root {
     --primary-color: #2563eb;
@@ -85,6 +85,45 @@ header h1 {
     color: var(--text-color);
 }
 
+/* Action Grid for Main Menu */
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.action-card {
+    background: var(--card-background);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.2s ease;
+}
+
+.action-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.action-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.action-card p {
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.entity-types {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
 /* Form Sections */
 .form-section {
     background: var(--card-background);
@@ -118,6 +157,7 @@ header h1 {
 .field input[type="text"],
 .field input[type="number"],
 .field input[type="url"],
+.field input[type="date"],
 .field input[type="password"],
 .field textarea,
 .field select {
@@ -160,6 +200,32 @@ header h1 {
     text-decoration: underline;
 }
 
+/* Multi-select styling */
+select[multiple] {
+    min-height: 150px;
+}
+
+select[multiple] option {
+    padding: 0.5rem;
+}
+
+select[multiple] option:checked {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* Property Badge */
+.property-badge {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-family: monospace;
+    margin-left: 0.5rem;
+}
+
 /* Field Groups */
 .field-group {
     display: grid;
@@ -178,13 +244,11 @@ header h1 {
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
     transition: all 0.2s ease;
     font-family: inherit;
-}
-
-.btn-icon {
-    font-size: 1.2rem;
+    text-decoration: none;
 }
 
 .btn-primary {
@@ -207,6 +271,17 @@ header h1 {
     background: #d1d5db;
 }
 
+.btn-text {
+    background: transparent;
+    color: var(--text-muted);
+    padding: 0.5rem 1rem;
+}
+
+.btn-text:hover {
+    color: var(--text-color);
+    background: var(--background);
+}
+
 .btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -217,6 +292,63 @@ header h1 {
     display: flex;
     gap: 1rem;
     flex-wrap: wrap;
+}
+
+/* Info/Error Boxes */
+.info-box {
+    background: #e0f2fe;
+    border-left: 4px solid #0284c7;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+}
+
+.error-box {
+    background: #fee2e2;
+    border-left: 4px solid var(--error-color);
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+}
+
+.success-box {
+    background: #d1fae5;
+    border-left: 4px solid var(--success-color);
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1.5rem;
+}
+
+/* Loading Spinner */
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+.spinner-large {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--primary-color);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.field-loader {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+}
+
+.field-loader .spinner-large {
+    margin-bottom: 1rem;
 }
 
 /* Status Messages */
@@ -257,119 +389,6 @@ header h1 {
     border: 2px solid #3b82f6;
 }
 
-/* Progress Indicator */
-.progress {
-    background: var(--card-background);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-top: 1.5rem;
-    box-shadow: var(--shadow-lg);
-}
-
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background: var(--border-color);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 1rem;
-}
-
-.progress-bar::before {
-    content: '';
-    display: block;
-    width: 30%;
-    height: 100%;
-    background: var(--primary-color);
-    animation: progress 1.5s ease-in-out infinite;
-}
-
-@keyframes progress {
-    0% {
-        transform: translateX(-100%);
-    }
-    100% {
-        transform: translateX(400%);
-    }
-}
-
-.progress-text {
-    text-align: center;
-    color: var(--text-muted);
-    font-weight: 500;
-}
-
-/* Recent Sites */
-.recent-items {
-    background: var(--card-background);
-    border-radius: 12px;
-    box-shadow: var(--shadow-lg);
-    padding: 1.5rem;
-    margin-top: 2rem;
-}
-
-.recent-items h3 {
-    margin-bottom: 1rem;
-    color: var(--text-color);
-}
-
-.recent-items ul {
-    list-style: none;
-}
-
-.recent-items li {
-    padding: 0.75rem;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.recent-items li:last-child {
-    border-bottom: none;
-}
-
-.site-info {
-    flex: 1;
-}
-
-.site-name {
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.site-id {
-    color: var(--text-muted);
-    font-size: 0.875rem;
-    font-family: monospace;
-    margin-left: 0.5rem;
-}
-
-.site-link {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-size: 0.875rem;
-}
-
-.site-link:hover {
-    text-decoration: underline;
-}
-
-/* Loading Spinner */
-.spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
 /* Responsive */
 @media (max-width: 768px) {
     body {
@@ -380,7 +399,7 @@ header h1 {
         font-size: 1.75rem;
     }
 
-    .form-section {
+    .form-section, .panel {
         padding: 1.5rem;
     }
 
@@ -388,9 +407,12 @@ header h1 {
         grid-template-columns: 1fr;
     }
 
+    .action-grid {
+        grid-template-columns: 1fr;
+    }
+
     .btn {
         width: 100%;
-        justify-content: center;
     }
 
     .form-actions {
@@ -407,3 +429,14 @@ header h1 {
 .hidden {
     display: none !important;
 }
+
+.text-center {
+    text-align: center;
+}
+
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
