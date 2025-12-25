@@ -468,10 +468,13 @@ app.post('/api/update-entity/:id', async (req, res) => {
 
     try {
         // Update the entity via Wikibase API
+        // Use clear=true to replace all data instead of merging
+        // This prevents duplicates and allows us to effectively "update" statements
         const params = new URLSearchParams({
             action: 'wbeditentity',
             id: itemId,
             data: JSON.stringify(entity),
+            clear: 'true',  // Clear and replace all data
             token: session.csrfToken,
             format: 'json'
         });

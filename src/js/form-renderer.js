@@ -860,14 +860,12 @@ function buildClaimForProperty(propertyId, value, datatype, qualifiers = null, s
             rank: 'normal'
         };
 
-        // Add statement ID if updating an existing statement (this tells Wikibase to update instead of create)
-        // Only include if statementId is a non-empty string with valid GUID format (Q###-GUID)
-        if (statementId && typeof statementId === 'string' && statementId.trim() && statementId.includes('-')) {
-            const trimmedId = statementId.trim();
-            console.log(`Adding statement ID to claim: ${trimmedId} for property ${propertyId}`);
-            claim.id = trimmedId;
-        } else if (statementId) {
-            console.warn(`Skipping invalid statement ID: "${statementId}" for property ${propertyId}`);
+        // NOTE: We don't include statement IDs in the claim structure
+        // Instead, we use clear=true on the server to replace all claims
+        // This prevents "Statement GUID can not be parsed" errors
+        // The statementId parameter is kept for future reference but not used
+        if (statementId) {
+            console.log(`Statement ID available but not used (clear=true mode): ${statementId} for property ${propertyId}`);
         }
 
         // Add qualifiers if present
