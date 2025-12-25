@@ -468,13 +468,13 @@ app.post('/api/update-entity/:id', async (req, res) => {
 
     try {
         // Update the entity via Wikibase API
-        // Use clear=true to replace all data instead of merging
-        // This prevents duplicates and allows us to effectively "update" statements
+        // NOTE: Without clear=true, this will MERGE (add) new claims to existing ones
+        // This means we'll get duplicates if the same value is submitted again
+        // TODO: Implement proper claim removal/update logic to prevent duplicates
         const params = new URLSearchParams({
             action: 'wbeditentity',
             id: itemId,
             data: JSON.stringify(entity),
-            clear: 'true',  // Clear and replace all data
             token: session.csrfToken,
             format: 'json'
         });
