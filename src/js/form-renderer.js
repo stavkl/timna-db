@@ -1161,13 +1161,23 @@ function buildDatavalueForType(value, datatype) {
 async function deleteStatements(itemId, statementGuids) {
     const endpoint = `/api/delete-statements/${itemId}`;
 
+    // Extract GUIDs from URIs if needed (format: http://.../statement/Q827-GUID -> Q827-GUID)
+    const extractedGuids = statementGuids.map(guid => {
+        if (guid.includes('/statement/')) {
+            return guid.split('/statement/').pop();
+        }
+        return guid;
+    });
+
+    console.log('Extracted GUIDs for deletion:', extractedGuids);
+
     const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-Session-ID': getSessionId()
         },
-        body: JSON.stringify({ guids: statementGuids })
+        body: JSON.stringify({ guids: extractedGuids })
     });
 
     if (!response.ok) {
