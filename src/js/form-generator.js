@@ -12,7 +12,8 @@ const formState = {
     instanceOfValue: null,
     schema: null,
     currentData: null, // Existing data in edit mode
-    config: null
+    config: null,
+    formHandler: null // Form-specific handler
 };
 
 /**
@@ -28,6 +29,9 @@ async function initFormGenerator() {
     formState.entityType = params.get('type');
     formState.exemplarId = params.get('exemplar');
     formState.itemId = params.get('item');
+
+    // Get form-specific handler
+    formState.formHandler = getFormHandler(formState.entityType, formState.exemplarId);
 
     // Validate mode
     if (!formState.mode || (formState.mode !== 'create' && formState.mode !== 'edit')) {
@@ -171,6 +175,11 @@ async function generateEditForm() {
         console.log('Properties in currentData:', Object.keys(formState.currentData.properties));
         for (const [propId, values] of Object.entries(formState.currentData.properties)) {
             console.log(`  ${propId}: ${values.length} value(s)`, values);
+        }
+
+        // Hook: Allow form handler to process existing data
+        if (formState.formHandler && formState.formHandler.processExistingData) {
+            formState.currentData = formState.formHandler.processExistingData(formState.currentData);
         }
 
         // Step 3: Get properties from exemplar
@@ -347,6 +356,13 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
 
     console.log('=== FINAL SCHEMA ===');
     console.log(`Schema has ${schema.properties.length} properties:`, schema.properties.map(p => `${p.id} (${p.label})`));
+
+    // Hook: Allow form handler to customize the schema
+    if (formState.formHandler && formState.formHandler.customizeSchema) {
+        const customizedSchema = formState.formHandler.customizeSchema(schema, formState.currentData);
+        console.log('Schema customized by form handler');
+        return customizedSchema;
+    }
 
     return schema;
 }

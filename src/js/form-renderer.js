@@ -592,13 +592,31 @@ async function handleFormSubmit(e) {
         (formState.mode === 'create' ? 'Creating...' : 'Updating...');
 
     try {
+        // Hook: Custom validation
+        if (formState.formHandler && formState.formHandler.validateForm) {
+            const validation = formState.formHandler.validateForm(e.target);
+            if (!validation.valid) {
+                throw new Error(validation.errors.join('\n'));
+            }
+        }
+
         // Collect form data
-        const formData = collectFormData();
+        let formData = collectFormData();
+
+        // Hook: Transform form data
+        if (formState.formHandler && formState.formHandler.transformFormData) {
+            formData = formState.formHandler.transformFormData(formData);
+        }
 
         console.log('Submitting form data:', formData);
 
         // Build Wikibase entity data
-        const entityData = buildEntityData(formData);
+        let entityData = buildEntityData(formData);
+
+        // Hook: Customize entity data
+        if (formState.formHandler && formState.formHandler.customizeEntityData) {
+            entityData = formState.formHandler.customizeEntityData(entityData, formData);
+        }
 
         // Submit to server
         const result = await submitEntityData(entityData);
