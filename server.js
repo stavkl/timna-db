@@ -503,6 +503,59 @@ app.post('/api/update-entity/:id', async (req, res) => {
 });
 
 /**
+ * Delete statements from an entity
+ */
+app.post('/api/delete-statements/:id', async (req, res) => {
+    const sessionId = req.headers['x-session-id'];
+    const { guids } = req.body;
+    const itemId = req.params.id;
+
+    const session = getSession(sessionId);
+    if (!session) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    if (!guids || !Array.isArray(guids) || guids.length === 0) {
+        return res.status(400).json({ error: 'Statement GUIDs required' });
+    }
+
+    try {
+        console.log(`Deleting ${guids.length} statement(s) from ${itemId}:`, guids);
+
+        // Delete statements using wbremoveclaims API
+        const params = new URLSearchParams({
+            action: 'wbremoveclaims',
+            claim: guids.join('|'),  // Multiple GUIDs separated by pipe
+            token: session.csrfToken,
+            format: 'json'
+        });
+
+        const response = await fetch(API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Cookie': session.cookies
+            },
+            body: params
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+            console.error('Wikibase API error:', data.error);
+            return res.status(400).json({ error: data.error.info || 'Failed to delete statements' });
+        }
+
+        console.log(`Successfully deleted ${guids.length} statement(s)`);
+        res.json({ success: true, claims: data.claims });
+
+    } catch (error) {
+        console.error('Delete statements error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * Helper: Clean up old sessions
  */
 function cleanupSessions() {

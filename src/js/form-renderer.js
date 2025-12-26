@@ -274,8 +274,10 @@ function renderValueWithQualifiers(field, index, valueData) {
     // Render qualifiers container (will be populated dynamically based on selected value)
     html += `<div id="${uniqueId}-qualifiers" class="qualifiers-container" style="margin-top: 1rem;"></div>`;
 
-    // Remove button (only show if index > 0)
-    if (index > 0) {
+    // Remove button - show for:
+    // 1. Additional values (index > 0)
+    // 2. Existing statements in edit mode (has statement ID)
+    if (index > 0 || (formState.mode === 'edit' && valueData?.statementId)) {
         html += `
             <button type="button" class="btn btn-text btn-sm" onclick="removeValueSection('${sectionId}')" style="margin-top: 0.5rem; color: #dc2626;">
                 Remove
@@ -366,8 +368,68 @@ function addValueSection(fieldId) {
  */
 function removeValueSection(sectionId) {
     const section = document.getElementById(sectionId);
-    if (section) {
+    if (!section) return;
+
+    const statementId = section.getAttribute('data-statement-id');
+
+    // If this is an existing statement (has statement ID), mark it for deletion
+    if (statementId && statementId.trim()) {
+        console.log(`Marking statement for deletion: ${statementId}`);
+
+        // Add to deletion list in formState
+        if (!formState.statementsToDelete) {
+            formState.statementsToDelete = [];
+        }
+        formState.statementsToDelete.push(statementId.trim());
+
+        // Visually indicate it's marked for deletion
+        section.style.opacity = '0.5';
+        section.style.textDecoration = 'line-through';
+        section.style.backgroundColor = '#fee2e2';
+
+        // Change button text
+        const removeBtn = section.querySelector('button[onclick*="removeValueSection"]');
+        if (removeBtn) {
+            removeBtn.textContent = 'Undo Delete';
+            removeBtn.onclick = () => undoDelete(sectionId);
+        }
+    } else {
+        // If it's a new value (no statement ID), just remove it from DOM
         section.remove();
+    }
+}
+
+/**
+ * Undo deletion of a statement
+ */
+function undoDelete(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+
+    const statementId = section.getAttribute('data-statement-id');
+
+    if (statementId && statementId.trim()) {
+        console.log(`Undoing deletion for statement: ${statementId}`);
+
+        // Remove from deletion list
+        if (formState.statementsToDelete) {
+            const index = formState.statementsToDelete.indexOf(statementId.trim());
+            if (index > -1) {
+                formState.statementsToDelete.splice(index, 1);
+            }
+        }
+
+        // Restore visual state
+        section.style.opacity = '';
+        section.style.textDecoration = '';
+        section.style.backgroundColor = '';
+
+        // Restore remove button
+        const removeBtn = section.querySelector('button[onclick*="undoDelete"]');
+        if (removeBtn) {
+            removeBtn.textContent = 'Remove';
+            removeBtn.onclick = () => removeValueSection(sectionId);
+        }
     }
 }
 
@@ -648,7 +710,18 @@ async function handleFormSubmit(e) {
             }
         }
 
-        // Collect form data
+        // Step 1: Delete marked statements (only in edit mode)
+        if (formState.mode === 'edit' && formState.statementsToDelete && formState.statementsToDelete.length > 0) {
+            console.log('Deleting marked statements:', formState.statementsToDelete);
+            submitBtn.innerHTML = '<span class="spinner"></span> Deleting statements...';
+
+            await deleteStatements(formState.itemId, formState.statementsToDelete);
+
+            // Clear the deletion list after successful deletion
+            formState.statementsToDelete = [];
+        }
+
+        // Step 2: Collect form data
         let formData = collectFormData();
 
         // Hook: Transform form data
@@ -704,6 +777,12 @@ function collectFormData() {
                 const index = section.getAttribute('data-index');
                 const uniqueId = `${field.id}-${index}`;
                 const statementId = section.getAttribute('data-statement-id');  // Get existing statement ID
+
+                // Skip sections marked for deletion
+                if (statementId && formState.statementsToDelete && formState.statementsToDelete.includes(statementId.trim())) {
+                    console.log(`Skipping statement marked for deletion: ${statementId}`);
+                    return;
+                }
 
                 // Get main value
                 let mainValue = null;
@@ -1076,6 +1155,39 @@ function buildDatavalueForType(value, datatype) {
 /**
  * Submit entity data to server
  */
+/**
+ * Delete statements from an item
+ */
+async function deleteStatements(itemId, statementGuids) {
+    const endpoint = `/api/delete-statements/${itemId}`;
+
+    const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Session-ID': getSessionId()
+        },
+        body: JSON.stringify({ guids: statementGuids })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+
+        // Check if session expired
+        if (response.status === 401) {
+            if (confirm('Your session has expired. Would you like to return to the login page?')) {
+                localStorage.removeItem('sessionId');
+                localStorage.removeItem('username');
+                window.location.href = '/src/index.html';
+            }
+        }
+
+        throw new Error(error.error || 'Failed to delete statements');
+    }
+
+    return await response.json();
+}
+
 async function submitEntityData(entityData) {
     const endpoint = formState.mode === 'create'
         ? '/api/create-entity'
