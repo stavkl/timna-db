@@ -881,8 +881,7 @@ function buildEntityData(formData) {
 
     // Add Instance Of claim
     // In CREATE mode: Use the instanceOfValue from form state (set automatically)
-    // In EDIT mode: Instance Of should be in formData.properties (shown in form now)
-    //               BUT if not present (shouldn't happen), preserve the original value
+    // In EDIT mode: Instance Of is shown in the form and will be processed from formData.properties below
     if (formState.mode === 'create' && formState.instanceOfValue) {
         entity.claims[formState.config.properties.instanceOf] = [{
             mainsnak: {
@@ -900,27 +899,8 @@ function buildEntityData(formData) {
             type: 'statement',
             rank: 'normal'
         }];
-    } else if (formState.mode === 'edit' && !formData.properties[formState.config.properties.instanceOf] && formState.instanceOfValue) {
-        // Fallback: If Instance Of not in form data (shouldn't happen), preserve original value
-        console.warn('Instance Of not in form data, preserving original value:', formState.instanceOfValue);
-        entity.claims[formState.config.properties.instanceOf] = [{
-            mainsnak: {
-                snaktype: 'value',
-                property: formState.config.properties.instanceOf,
-                datavalue: {
-                    value: {
-                        'entity-type': 'item',
-                        'numeric-id': parseInt(formState.instanceOfValue.substring(1)),
-                        id: formState.instanceOfValue
-                    },
-                    type: 'wikibase-entityid'
-                }
-            },
-            type: 'statement',
-            rank: 'normal'
-        }];
     }
-    // Otherwise, Instance Of should be processed from formData.properties below
+    // In edit mode, Instance Of is processed from formData.properties with other properties
 
     // Add property claims
     for (const [propertyId, propertyData] of Object.entries(formData.properties)) {

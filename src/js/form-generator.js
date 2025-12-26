@@ -217,7 +217,7 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
     // Add label and description fields (always present)
     schema.basic.push({
         id: 'label',
-        label: 'Name',
+        label: 'Label',
         type: 'text',
         required: true,
         isSpecial: true
