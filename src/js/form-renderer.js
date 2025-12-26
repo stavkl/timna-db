@@ -1092,6 +1092,17 @@ async function submitEntityData(entityData) {
 
     if (!response.ok) {
         const error = await response.json();
+
+        // Check if session expired
+        if (response.status === 401) {
+            if (confirm('Your session has expired. Would you like to return to the login page?')) {
+                // Clear expired session
+                localStorage.removeItem('sessionId');
+                localStorage.removeItem('username');
+                window.location.href = '/src/index.html';
+            }
+        }
+
         throw new Error(error.error || 'Failed to submit data');
     }
 

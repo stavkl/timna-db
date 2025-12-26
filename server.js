@@ -506,10 +506,12 @@ app.post('/api/update-entity/:id', async (req, res) => {
  * Helper: Clean up old sessions
  */
 function cleanupSessions() {
-    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    // Sessions expire after 8 hours (full workday)
+    const eightHoursAgo = Date.now() - (8 * 60 * 60 * 1000);
     for (const [sessionId, session] of sessions.entries()) {
-        if (session.createdAt < oneHourAgo) {
+        if (session.createdAt < eightHoursAgo) {
             sessions.delete(sessionId);
+            console.log(`Cleaned up expired session: ${sessionId}`);
         }
     }
 }
