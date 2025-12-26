@@ -717,6 +717,15 @@ async function handleFormSubmit(e) {
 
             await deleteStatements(formState.itemId, formState.statementsToDelete);
 
+            // Remove the deleted sections from DOM
+            formState.statementsToDelete.forEach(statementId => {
+                const section = document.querySelector(`[data-statement-id="${statementId}"]`);
+                if (section) {
+                    console.log(`Removing deleted section from DOM: ${statementId}`);
+                    section.remove();
+                }
+            });
+
             // Clear the deletion list after successful deletion
             formState.statementsToDelete = [];
         }
