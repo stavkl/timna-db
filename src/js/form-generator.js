@@ -268,14 +268,19 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
 
             console.log(`  Query returned ${values.length} results`);
             if (values.length > 0) {
-                console.log(`  Sample values:`, values.slice(0, 3));
+                // Get unique Instance Of types discovered
+                const discoveredTypes = [...new Set(values.map(v => v.instanceOf?.value.split('/').pop()).filter(Boolean))];
+                console.log(`  Discovered Instance Of types: ${discoveredTypes.join(', ')}`);
+                console.log(`  Sample values:`, values.slice(0, 5).map(v => `${v.valueLabel.value} (${v.value.value.split('/').pop()})`));
+
                 field.values = values.map(v => ({
                     id: v.value.value.split('/').pop(),
                     label: v.valueLabel.value
                 }));
                 field.type = 'multiselect';
                 field.allowMultiple = true;
-                console.log(`  ✓ Set field type to multiselect with ${field.values.length} values`);
+                console.log(`  ✓ Set field type to multiselect with ${field.values.length} total values`);
+                console.log(`  Full value list:`, field.values.map(v => `${v.label} (${v.id})`).join(', '));
             } else {
                 console.log(`  ✗ No existing values found, will use item input`);
                 field.type = 'item-input';

@@ -73,7 +73,9 @@ function buildPropertyQualifiersQuery(config, exemplarId, propertyId) {
 }
 
 /**
- * Build query to get all values for a WikibaseItem property across items of the same type
+ * Build query to get all values for a WikibaseItem property
+ * This discovers ALL Instance Of types from existing property values,
+ * then returns ALL items of those types (even if not yet used in the property)
  */
 function buildPropertyValuesQuery(config, propertyId, instanceOfValue) {
     return `
@@ -84,13 +86,17 @@ function buildPropertyValuesQuery(config, propertyId, instanceOfValue) {
         PREFIX wikibase: <http://wikiba.se/ontology#>
         PREFIX bd: <http://www.bigdata.com/rdf#>
 
-        SELECT DISTINCT ?value ?valueLabel
+        SELECT DISTINCT ?value ?valueLabel ?instanceOf
         WHERE {
-            # Get all items of this type (including the exemplar)
-            ?item wdt:${config.properties.instanceOf} wd:${instanceOfValue} .
+            # First, find sample values that are already used in this property
+            ?anyItem wdt:${propertyId} ?sampleValue .
 
-            # Get values for this specific property
-            ?item wdt:${propertyId} ?value .
+            # Get the Instance Of type for each sample value
+            ?sampleValue wdt:${config.properties.instanceOf} ?instanceOf .
+
+            # Now get ALL items that have ANY of these Instance Of types
+            # This includes items not yet used in the property
+            ?value wdt:${config.properties.instanceOf} ?instanceOf .
 
             # Ensure value is an item (not a literal)
             FILTER(isIRI(?value))
