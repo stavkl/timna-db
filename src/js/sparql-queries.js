@@ -105,9 +105,10 @@ function buildPropertyValuesQuery(config, propertyId, instanceOfValue) {
 
 /**
  * Build query to get all possible values for a WikibaseItem qualifier
- * across all items of the same type
+ * This discovers the Instance Of type from existing qualifier values
+ * and returns all items of that type
  */
-function buildQualifierValuesQuery(config, qualifierId, instanceOfValue) {
+function buildQualifierValuesQuery(config, qualifierId) {
     return `
         PREFIX wd: <${config.wikibase.url}/entity/>
         PREFIX wdt: <${config.wikibase.url}/prop/direct/>
@@ -116,16 +117,16 @@ function buildQualifierValuesQuery(config, qualifierId, instanceOfValue) {
         PREFIX wikibase: <http://wikiba.se/ontology#>
         PREFIX bd: <http://www.bigdata.com/rdf#>
 
-        SELECT DISTINCT ?value ?valueLabel
+        SELECT DISTINCT ?value ?valueLabel ?instanceOf
         WHERE {
-            # Get all items of this type
-            ?item wdt:${config.properties.instanceOf} wd:${instanceOfValue} .
+            # Get any statement with this qualifier
+            ?statement pq:${qualifierId} ?sampleValue .
 
-            # Get any statement from these items
-            ?item ?p ?statement .
+            # Get the Instance Of for this sample value
+            ?sampleValue wdt:${config.properties.instanceOf} ?instanceOf .
 
-            # Get qualifier values
-            ?statement pq:${qualifierId} ?value .
+            # Now get ALL items of this same type
+            ?value wdt:${config.properties.instanceOf} ?instanceOf .
 
             # Ensure value is an item (not a literal)
             FILTER(isIRI(?value))

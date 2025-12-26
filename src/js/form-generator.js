@@ -328,7 +328,7 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
 
                 if (qualifierInfo.datatype === 'WikibaseItem') {
                     console.log(`  Fetching values for qualifier ${qualifierId}...`);
-                    const valuesQuery = buildQualifierValuesQuery(formState.config, qualifierId, formState.instanceOfValue);
+                    const valuesQuery = buildQualifierValuesQuery(formState.config, qualifierId);
                     const values = await executeSparqlQuery(
                         formState.config.wikibase.sparqlEndpoint,
                         valuesQuery
@@ -339,7 +339,9 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
                             id: v.value.value.split('/').pop(),
                             label: v.valueLabel.value
                         }));
-                        console.log(`    Found ${values.length} possible values`);
+                        console.log(`    Found ${values.length} possible values for qualifier (discovered from Instance Of: ${values[0].instanceOf?.value.split('/').pop()})`);
+                    } else {
+                        console.log(`    No values found - qualifier may not be used yet in the database`);
                     }
                 }
 
