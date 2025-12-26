@@ -394,7 +394,30 @@ function updateQualifiers(fieldId, fieldData, uniqueId, existingQualifiers = nul
     if (!field || !field.qualifierMap) return;
 
     // Get qualifiers for this value
-    const qualifierIds = field.qualifierMap[selectedValue];
+    // First try direct match (specific value ID)
+    let qualifierIds = field.qualifierMap[selectedValue];
+
+    // If no direct match, try to find by Instance Of type
+    // Look for the selectedValue in field.values and get its Instance Of from there
+    if (!qualifierIds || qualifierIds.size === 0) {
+        // Find the selected value in the field's values to get its Instance Of type
+        const selectedValueObj = field.values?.find(v => v.id === selectedValue);
+
+        // Note: field.values doesn't have Instance Of info currently
+        // So we need to check all keys in qualifierMap to see if any match
+        // This works because the map now uses Instance Of types as keys
+        for (const [mapKey, quals] of Object.entries(field.qualifierMap)) {
+            // mapKey is now the Instance Of type (e.g., Q1009)
+            // We need to check if selectedValue is an instance of mapKey
+            // For now, we'll just try all qualifier sets until we find one
+            if (quals && quals.size > 0) {
+                qualifierIds = quals;
+                console.log(`Using qualifiers from map key: ${mapKey} for value ${selectedValue}`);
+                break; // Use the first non-empty qualifier set
+            }
+        }
+    }
+
     if (!qualifierIds || qualifierIds.size === 0) {
         // No qualifiers for this value
         const qualifiersContainer = document.getElementById(`${uniqueId}-qualifiers`);

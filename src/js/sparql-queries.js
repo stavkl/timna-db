@@ -39,6 +39,7 @@ function buildExemplarPropertiesQuery(config, exemplarId) {
 function buildPropertyQualifiersQuery(config, exemplarId, propertyId) {
     return `
         PREFIX wd: <${config.wikibase.url}/entity/>
+        PREFIX wdt: <${config.wikibase.url}/prop/direct/>
         PREFIX p: <${config.wikibase.url}/prop/>
         PREFIX ps: <${config.wikibase.url}/prop/statement/>
         PREFIX pq: <${config.wikibase.url}/prop/qualifier/>
@@ -46,13 +47,18 @@ function buildPropertyQualifiersQuery(config, exemplarId, propertyId) {
         PREFIX bd: <http://www.bigdata.com/rdf#>
         PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
-        SELECT DISTINCT ?mainValue ?mainValueLabel ?qualifier ?qualifierLabel ?qualifierDatatype
+        SELECT DISTINCT ?mainValue ?mainValueLabel ?mainValueType ?qualifier ?qualifierLabel ?qualifierDatatype
         WHERE {
             # Get statements for this property
             wd:${exemplarId} p:${propertyId} ?statement .
 
             # Get the main value of the statement
             ?statement ps:${propertyId} ?mainValue .
+
+            # Get the Instance Of type for the main value (if it's an item)
+            OPTIONAL {
+                ?mainValue wdt:${config.properties.instanceOf} ?mainValueType .
+            }
 
             # Get qualifiers on those statements
             ?statement ?qualifierProp ?qualifierValue .

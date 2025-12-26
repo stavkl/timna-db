@@ -308,8 +308,15 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
                     ? row.mainValue.value.split('/').pop()
                     : row.mainValue.value; // Could be literal value
 
+                // Get Instance Of type for the main value (if available)
+                // This allows qualifiers to apply to ALL items of the same type, not just the specific exemplar value
+                const mainValueType = row.mainValueType?.value.split('/').pop();
+                const mapKey = mainValueType || mainValueId; // Use Instance Of type if available, otherwise specific value
+
                 const qualifierId = row.qualifier.value.split('/').pop();
                 const qualifierDatatype = row.qualifierDatatype.value.split('#').pop();
+
+                console.log(`  Qualifier ${qualifierId} mapped to: ${mapKey}${mainValueType ? ` (Instance Of type from ${mainValueId})` : ' (specific value)'}`);
 
                 // Track unique qualifiers
                 if (!allQualifiers.has(qualifierId)) {
@@ -320,11 +327,11 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
                     });
                 }
 
-                // Map qualifier to main value
-                if (!qualifierMap[mainValueId]) {
-                    qualifierMap[mainValueId] = new Set();
+                // Map qualifier to Instance Of type (or specific value if no type)
+                if (!qualifierMap[mapKey]) {
+                    qualifierMap[mapKey] = new Set();
                 }
-                qualifierMap[mainValueId].add(qualifierId);
+                qualifierMap[mapKey].add(qualifierId);
             }
 
             // For each qualifier, get possible values if it's WikibaseItem type
