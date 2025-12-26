@@ -101,7 +101,16 @@ function renderField(field, currentData) {
         return renderRepeatableFieldWithQualifiers(field, currentData);
     }
 
-    // For properties without qualifiers, use existing logic
+    // In edit mode, check if there are multiple values - if so, render as repeatable
+    if (formState.mode === 'edit' && currentData?.properties?.[field.id]) {
+        const propData = currentData.properties[field.id];
+        if (Array.isArray(propData) && propData.length > 1 && field.type !== 'multiselect') {
+            console.log(`  ${field.id} has ${propData.length} values in edit mode - rendering as repeatable`);
+            return renderRepeatableFieldWithQualifiers(field, currentData);
+        }
+    }
+
+    // For properties without qualifiers and single value, use existing logic
     return renderSimpleField(field, currentData);
 }
 
