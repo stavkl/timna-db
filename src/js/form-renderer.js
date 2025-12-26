@@ -1162,11 +1162,23 @@ async function deleteStatements(itemId, statementGuids) {
     const endpoint = `/api/delete-statements/${itemId}`;
 
     // Extract GUIDs from URIs if needed (format: http://.../statement/Q827-GUID -> Q827-GUID)
+    // Then convert to Wikibase format: Q827-ABC -> Q827$ABC ($ separator)
     const extractedGuids = statementGuids.map(guid => {
-        if (guid.includes('/statement/')) {
-            return guid.split('/statement/').pop();
+        let cleanGuid = guid;
+
+        // Extract from URI if needed
+        if (cleanGuid.includes('/statement/')) {
+            cleanGuid = cleanGuid.split('/statement/').pop();
         }
-        return guid;
+
+        // Convert hyphen separator to dollar sign (Q827-ABC -> Q827$ABC)
+        // Split on first hyphen only (item ID from UUID)
+        const parts = cleanGuid.match(/^(Q\d+)-(.+)$/);
+        if (parts) {
+            cleanGuid = `${parts[1]}$${parts[2]}`;
+        }
+
+        return cleanGuid;
     });
 
     console.log('Extracted GUIDs for deletion:', extractedGuids);
