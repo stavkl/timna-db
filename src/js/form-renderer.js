@@ -465,25 +465,50 @@ function updateQualifiers(fieldId, fieldData, uniqueId, existingQualifiers = nul
  * Initialize qualifiers for existing data after form is rendered
  */
 function initializeExistingQualifiers(currentData) {
-    if (!currentData || !currentData.properties) return;
+    console.log('=== INITIALIZING EXISTING QUALIFIERS ===');
+    if (!currentData || !currentData.properties) {
+        console.log('No currentData or properties');
+        return;
+    }
 
     // For each property that has values with qualifiers
     for (const [propertyId, values] of Object.entries(currentData.properties)) {
+        console.log(`Checking property ${propertyId} for qualifiers...`);
+
         // Find the field in schema
         const field = formState.schema.properties.find(f => f.id === propertyId);
-        if (!field || !field.qualifiers || field.qualifiers.length === 0) continue;
+        if (!field) {
+            console.log(`  Field ${propertyId} not found in schema`);
+            continue;
+        }
+
+        if (!field.qualifiers || field.qualifiers.length === 0) {
+            console.log(`  Field ${propertyId} has no qualifiers in schema`);
+            continue;
+        }
+
+        console.log(`  Field ${propertyId} has ${field.qualifiers.length} qualifiers, ${values.length} values`);
 
         // For each value, trigger qualifier update with existing qualifier data
         values.forEach((valueData, index) => {
             const uniqueId = `${propertyId}-${index}`;
             const valueElement = document.getElementById(`${uniqueId}-value`);
 
+            console.log(`  Value ${index}: uniqueId=${uniqueId}, element exists=${!!valueElement}, has value=${!!valueElement?.value}`);
+            if (valueData.qualifiers) {
+                console.log(`    Existing qualifiers:`, valueData.qualifiers);
+            }
+
             // Only initialize if the element exists and has a value
             if (valueElement && valueElement.value) {
+                console.log(`    Calling updateQualifiers for ${uniqueId}`);
                 updateQualifiers(propertyId, field, uniqueId, valueData.qualifiers);
+            } else {
+                console.log(`    Skipping - element not ready or no value`);
             }
         });
     }
+    console.log('=== END QUALIFIER INITIALIZATION ===');
 }
 
 /**
