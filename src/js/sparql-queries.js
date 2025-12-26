@@ -74,10 +74,10 @@ function buildPropertyQualifiersQuery(config, exemplarId, propertyId) {
 
 /**
  * Build query to get all values for a WikibaseItem property
- * This discovers ALL Instance Of types from existing property values,
+ * This discovers Instance Of types from the EXEMPLAR's property values,
  * then returns ALL items of those types (even if not yet used in the property)
  */
-function buildPropertyValuesQuery(config, propertyId, instanceOfValue) {
+function buildPropertyValuesQuery(config, propertyId, instanceOfValue, exemplarId) {
     return `
         PREFIX wd: <${config.wikibase.url}/entity/>
         PREFIX wdt: <${config.wikibase.url}/prop/direct/>
@@ -88,10 +88,11 @@ function buildPropertyValuesQuery(config, propertyId, instanceOfValue) {
 
         SELECT DISTINCT ?value ?valueLabel ?instanceOf
         WHERE {
-            # First, find sample values that are already used in this property
-            ?anyItem wdt:${propertyId} ?sampleValue .
+            # ONLY look at the exemplar item to discover Instance Of types
+            # This prevents pollution from other unrelated items in the database
+            wd:${exemplarId} wdt:${propertyId} ?sampleValue .
 
-            # Get the Instance Of type for each sample value
+            # Get the Instance Of type for each sample value from the exemplar
             ?sampleValue wdt:${config.properties.instanceOf} ?instanceOf .
 
             # Now get ALL items that have ANY of these Instance Of types

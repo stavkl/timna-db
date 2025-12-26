@@ -259,7 +259,8 @@ async function buildSchemaWithValues(properties, instanceOfValue) {
         if (datatype === 'WikibaseItem') {
             console.log(`Fetching values for ${propertyId} (${field.label})...`);
             console.log(`  Instance Of value: ${instanceOfValue}`);
-            const valuesQuery = buildPropertyValuesQuery(formState.config, propertyId, instanceOfValue);
+            console.log(`  Exemplar ID: ${formState.exemplarId}`);
+            const valuesQuery = buildPropertyValuesQuery(formState.config, propertyId, instanceOfValue, formState.exemplarId);
             console.log(`  SPARQL Query:`, valuesQuery);
             const values = await executeSparqlQuery(
                 formState.config.wikibase.sparqlEndpoint,
