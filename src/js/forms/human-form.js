@@ -14,8 +14,8 @@ class HumanFormHandler extends BaseFormHandler {
     customizeSchema(schema, currentData) {
         console.log('[HumanForm] Customizing schema');
 
-        // Example: Reorder fields to show name-related fields first
-        const namePropertyIds = ['P147', 'P148']; // Given name, Family name
+        // Reorder fields to show name-related fields first
+        const namePropertyIds = ['P205', 'P207']; // Given name (P205), Family name (P207)
         const nameFields = [];
         const otherFields = [];
 
@@ -51,8 +51,8 @@ class HumanFormHandler extends BaseFormHandler {
      * Make certain properties required for Human forms
      */
     isPropertyRequired(propertyId) {
-        // Example: Make family name and given name required
-        const requiredProps = ['P147', 'P148']; // Given name, Family name
+        // Make family name and given name required
+        const requiredProps = ['P205', 'P207']; // Given name (P205), Family name (P207)
 
         if (requiredProps.includes(propertyId)) {
             return true;
@@ -67,11 +67,12 @@ class HumanFormHandler extends BaseFormHandler {
     validateForm(formElement) {
         const errors = [];
 
-        // Example: Ensure at least one name field is filled
-        const givenName = document.getElementById('P147')?.value ||
-                         document.querySelector('[name*="P147"]')?.value;
-        const familyName = document.getElementById('P148')?.value ||
-                          document.querySelector('[name*="P148"]')?.value;
+        // Ensure at least one name field is filled
+        // P205 (Given Name) has qualifiers, so check for P205-0-value (repeatable field format)
+        // P207 (Family Name) is simple field
+        const givenName = document.getElementById('P205-0-value')?.value ||
+                         document.getElementById('P205')?.value;
+        const familyName = document.getElementById('P207')?.value;
 
         if (!givenName && !familyName) {
             errors.push('At least one name field (Given Name or Family Name) must be filled');
